@@ -1,0 +1,7 @@
+{
+  "owner": "renovatebot",
+  "name": "github-action",
+  "alias": "renovatebot-github-action",
+  "visibility": "private",
+  "block_publish": false
+}
