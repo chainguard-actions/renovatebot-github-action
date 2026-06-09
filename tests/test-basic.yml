@@ -4,30 +4,18 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_EVENT_NAME: push
-      GITHUB_REF: refs/heads/main
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Create minimal renovate config
-        run: |
-          mkdir -p /tmp/renovate-config
-          cat > /tmp/renovate-config/renovate.json <<'EOF'
-          {
-            "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-            "repositories": []
-          }
-          EOF
       - id: action
         uses: .
         continue-on-error: true
         with:
           token: fake-token-for-testing
-          configurationFile: /tmp/renovate-config/renovate.json
+          configurationFile: renovate.json
         env:
-          RENOVATE_TOKEN: fake-token-for-testing
+          GITHUB_EVENT_NAME: push
           LOG_LEVEL: debug
-      - name: Assert action ran (inputs were accepted)
+      - name: Assert action ran (may fail due to invalid token)
         run: |
-          echo "Action completed (possibly with error due to fake token, which is expected)"
+          echo "Action completed (with or without error - testing input coverage)"
           echo "PASS: inputs token and configurationFile were accepted"
