@@ -1,5 +1,7 @@
 # renovatebot/github-action
 
+GitHub Action to run self-hosted Renovate.
+
 Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/renovatebot/github-action](https://github.com/renovatebot/github-action).
 
 ## Versions
