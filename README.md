@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v46.1.15 | [`v46.1.15`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.15) | [`8217b3f`](https://github.com/renovatebot/github-action/commit/8217b3fc286df088d7c27f3255fe8414463bc0fd) |
 | v46.1.7 | [`v46.1.7`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.7) | — |
 
 ## Privacy
