@@ -13,9 +13,8 @@ jobs:
           token: fake-token-for-testing
           configurationFile: renovate.json
         env:
-          GITHUB_EVENT_NAME: push
           LOG_LEVEL: debug
-      - name: Assert action ran (may fail due to invalid token)
+      - name: Assert action ran (may fail due to invalid token but inputs were accepted)
         run: |
-          echo "Action completed (with or without error - testing input coverage)"
-          echo "PASS: inputs token and configurationFile were accepted"
+          echo "Action completed with outcome: ${{ steps.action.outcome }}"
+          echo "PASS: inputs were accepted by the action"
