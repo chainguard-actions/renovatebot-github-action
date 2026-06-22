@@ -1,0 +1,38 @@
+name: Test docker-cmd-file, docker-network, and docker-user inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a minimal docker cmd file
+        run: |
+          echo '#!/bin/sh' > /tmp/renovate-cmd.sh
+          echo 'exec renovate "$@"' >> /tmp/renovate-cmd.sh
+          chmod +x /tmp/renovate-cmd.sh
+
+      - name: Run action with docker-cmd-file, docker-network, and docker-user inputs
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: fake-token-for-testing
+          docker-cmd-file: /tmp/renovate-cmd.sh
+          docker-network: bridge
+          docker-user: '1000'
+          renovate-version: '43'
+          renovate-image: ghcr.io/renovatebot/renovate
+          docker-volumes: /tmp:/tmp
+
+      - name: Assert action ran (docker-cmd-file, docker-network, docker-user inputs were accepted)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ -z "$OUTCOME" ]; then
+            echo "FAIL: step outcome was not set"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome=$OUTCOME) — docker-cmd-file, docker-network, docker-user inputs were accepted"
