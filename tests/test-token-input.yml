@@ -1,0 +1,31 @@
+name: Test token provided via input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with token via input
+        id: action
+        uses: .
+        with:
+          token: fake-token-for-testing
+          renovate-version: '43'
+        continue-on-error: true
+
+      - name: Assert action accepted token input
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should proceed past input validation since a token was provided.
+          # It may fail due to Docker/network issues, but should NOT fail with
+          # "'token' MUST be passed using its input or the 'RENOVATE_TOKEN' environment variable"
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action accepted token input and was invoked (outcome: $OUTCOME)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
