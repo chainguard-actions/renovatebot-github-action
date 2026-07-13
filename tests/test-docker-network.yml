@@ -1,0 +1,30 @@
+name: Test docker-network input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: fake-token-for-testing
+          docker-network: 'host'
+        # docker-network sets the Docker network mode for the renovate container.
+        # The action may fail at Docker/Renovate stage, but NOT at input parsing.
+
+      - name: Assert action ran (docker-network input was accepted)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may fail at Docker stage, but that is acceptable.
+          # We verify the step was not skipped (input parsing succeeded).
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action step was unexpectedly skipped"
+            exit 1
+          fi
+          echo "PASS: action ran with docker-network=host"

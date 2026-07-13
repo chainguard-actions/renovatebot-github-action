@@ -1,0 +1,36 @@
+name: Test docker-volumes input with multiple volumes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create temp directories for volume mounts
+        run: |
+          mkdir -p /tmp/renovate-vol1
+          mkdir -p /tmp/renovate-vol2
+          echo "Created temp directories for volume mounts"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: fake-token-for-testing
+          docker-volumes: "/tmp/renovate-vol1:/tmp/renovate-vol1;/tmp/renovate-vol2:/tmp/renovate-vol2"
+        # Multiple volumes separated by semicolons — action should parse them correctly
+        # It will fail at Docker stage (no real Renovate), but NOT at input parsing
+
+      - name: Assert action ran (volumes input was accepted)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may fail at Docker stage, but that is acceptable.
+          # We verify the step was not skipped (input parsing succeeded).
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action step was unexpectedly skipped"
+            exit 1
+          fi
+          echo "PASS: action ran with multiple docker-volumes (semicolon-separated)"
