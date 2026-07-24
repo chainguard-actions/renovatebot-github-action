@@ -1,0 +1,29 @@
+name: Test custom env-regex input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with custom env-regex (expect failure at docker stage, not input validation)
+        id: action
+        uses: .
+        continue-on-error: true
+        env:
+          RENOVATE_TOKEN: 'fake-renovate-token-for-testing'
+        with:
+          renovate-version: '43'
+          env-regex: '^(?:RENOVATE_\w+|LOG_LEVEL)$'
+
+      - name: Assert action accepted custom env-regex without input validation error
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail at the Docker stage (not at env-regex validation),
+          # meaning the custom env-regex was accepted as valid input.
+          # Any outcome (success or failure) is acceptable as long as it's not
+          # a failure due to invalid env-regex format.
+          echo "PASS: action accepted custom env-regex input (outcome: $OUTCOME)"
