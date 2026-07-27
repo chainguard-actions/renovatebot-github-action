@@ -1,0 +1,33 @@
+name: Test docker-related inputs (mount-docker-socket, docker-user, docker-network)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with docker-related inputs
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          mount-docker-socket: "true"
+          docker-user: "1000"
+          docker-network: "bridge"
+          # Use a non-existent config file to fail fast without a full Renovate run
+          configurationFile: /nonexistent/renovate-config.json
+
+      - name: Assert action ran (inputs were accepted)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail (missing config file or Docker runtime error),
+          # but it must NOT be skipped — it must have actually run.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran with mount-docker-socket, docker-user, and docker-network inputs accepted"

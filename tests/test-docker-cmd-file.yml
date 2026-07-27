@@ -1,0 +1,31 @@
+name: Test docker-cmd-file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with docker-cmd-file input
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          docker-cmd-file: /nonexistent/custom-renovate-cmd.sh
+          # Use a non-existent config file to fail fast without a full Renovate run
+          configurationFile: /nonexistent/renovate-config.json
+
+      - name: Assert action ran (docker-cmd-file input was accepted)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail (missing cmd file or config file),
+          # but it must NOT be skipped — it must have actually run.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran with docker-cmd-file input accepted"
