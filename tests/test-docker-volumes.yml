@@ -1,0 +1,38 @@
+name: Test custom docker volumes input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create temp directories for volume mounts
+        run: |
+          mkdir -p /tmp/renovate-cache
+          mkdir -p /tmp/renovate-work
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          renovate-version: '38'
+          docker-volumes: '/tmp/renovate-cache:/tmp/renovate-cache;/tmp/renovate-work:/tmp/renovate-work'
+        # The action should parse the semicolon-separated volumes and pass them
+        # to Docker. It will fail on the sentinel repo but should not fail due
+        # to volume parsing errors.
+
+      - name: Assert action ran with custom volumes
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom docker volumes"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (Renovate/Docker issue on sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

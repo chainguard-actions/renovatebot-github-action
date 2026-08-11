@@ -1,0 +1,34 @@
+name: Test invalid configuration file path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          configurationFile: /nonexistent/path/renovate.json
+          renovate-version: '38'
+        # The action should fail because the configuration file does not exist.
+        # From renovate.ts validateArguments():
+        # "configuration file '...' MUST be an existing file"
+
+      - name: Assert action failed due to missing config file
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed when config file does not exist"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: action should have failed with a non-existent config file"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

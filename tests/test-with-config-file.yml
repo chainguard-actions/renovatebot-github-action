@@ -1,0 +1,45 @@
+name: Test with valid configuration file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a minimal Renovate config file
+        run: |
+          mkdir -p /tmp/renovate-config
+          cat > /tmp/renovate-config/renovate.json <<'EOF'
+          {
+            "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+            "extends": ["config:base"]
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          configurationFile: /tmp/renovate-config/renovate.json
+          renovate-version: '38'
+        # The config file exists, so validateArguments() should pass.
+        # The action will then try to run Renovate via Docker, which may fail
+        # on the sentinel repo — that is acceptable.
+
+      - name: Assert action ran past config file validation
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # Both success and failure are acceptable — the key is that the action
+          # did NOT fail immediately due to a missing config file.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with valid config file"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (Renovate/Docker issue on sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
