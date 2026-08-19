@@ -1,0 +1,62 @@
+name: 'Setup Node.js'
+description: 'Setup Node and install dependencies using cache'
+inputs:
+  save-cache:
+    description: 'Save cache when needed'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: ⚙️ Calculate `CACHE_KEY`
+      shell: bash
+      env:
+        CACHE_KEY_VALUE: ${{ hashFiles('.node-version', 'pnpm-lock.yaml') }}
+      run: |
+        safe=$(printf '%s' "node_modules-${CACHE_KEY_VALUE}" | tr -d '\n\r')
+        echo "CACHE_KEY=${safe}" >> "$GITHUB_ENV"
+
+    - name: ♻️ Restore `node_modules`
+      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      id: node-modules-restore
+      with:
+        path: node_modules
+        key: ${{ env.CACHE_KEY }}
+        enableCrossOsArchive: true
+
+    - name: Calculate `CACHE_HIT`
+      shell: bash
+      env:
+        CACHE_HIT_VALUE: ${{ (steps.node-modules-restore.outputs.cache-hit == 'true') && 'true' || '' }}
+      run: |
+        safe=$(printf '%s' "$CACHE_HIT_VALUE" | tr -d '\n\r')
+        echo "CACHE_HIT=${safe}" >> "$GITHUB_ENV"
+
+    - name: ⚙️ Setup pnpm
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      with:
+        standalone: true
+
+    - name: ⚙️ Setup Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      with:
+        node-version-file: .node-version
+        cache: ${{ env.CACHE_HIT != 'true' && 'pnpm' || '' }}
+
+    - name: 📥 Install dependencies
+      if: env.CACHE_HIT != 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile
+      env:
+        # Other environment variables
+        HUSKY: '0' # By default do not run HUSKY install
+
+    - name: ♻️ Write `node_modules` cache
+      if: inputs.save-cache == 'true' && env.CACHE_HIT != 'true'
+      uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: node_modules
+        key: ${{ env.CACHE_KEY }}
+        enableCrossOsArchive: true

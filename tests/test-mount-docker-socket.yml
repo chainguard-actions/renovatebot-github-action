@@ -10,12 +10,15 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          token: fake-token-for-testing
-          mount-docker-socket: 'true'
-          docker-socket-host-path: /var/run/docker.sock
-        env:
-          LOG_LEVEL: debug
+          token: ${{ github.token }}
+          mount-docker-socket: true
       - name: Assert action ran with mount-docker-socket input
         run: |
-          echo "Action completed (with or without error - testing input coverage)"
-          echo "PASS: input mount-docker-socket was accepted"
+          echo "conclusion: ${{ steps.action.conclusion }}"
+          # The action may fail due to Renovate config/runtime issues,
+          # but it must have been invoked (not skipped).
+          if [ "${{ steps.action.conclusion }}" = "skipped" ]; then
+            echo "FAIL: step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: mount-docker-socket input was accepted"

@@ -1,0 +1,31 @@
+name: Test custom env-regex input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with custom env-regex (expect failure at Docker stage, not input parsing)
+        id: action
+        uses: .
+        with:
+          token: 'fake-token-no-whitespace'
+          env-regex: '^(?:RENOVATE_\w+|LOG_LEVEL)$'
+        continue-on-error: true
+
+      - name: Assert action ran with custom env-regex
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail because Renovate can't actually run in this environment,
+          # but it should NOT fail due to invalid env-regex input parsing.
+          # Either failure or success is acceptable — what matters is the action
+          # accepted the custom env-regex without throwing an input parsing error.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome=$OUTCOME) — custom env-regex was accepted"

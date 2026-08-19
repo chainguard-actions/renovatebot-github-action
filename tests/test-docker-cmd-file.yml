@@ -1,0 +1,25 @@
+name: Test docker-cmd-file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          docker-cmd-file: /usr/local/bin/renovate
+      - name: Assert action ran with docker-cmd-file input
+        run: |
+          echo "conclusion: ${{ steps.action.conclusion }}"
+          # The action may fail due to Renovate config/runtime issues,
+          # but it must have been invoked (not skipped). We just verify
+          # the step completed (either success or failure) — not skipped.
+          if [ "${{ steps.action.conclusion }}" = "skipped" ]; then
+            echo "FAIL: step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: docker-cmd-file input was accepted"

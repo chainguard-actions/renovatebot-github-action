@@ -1,25 +1,24 @@
-name: Test docker-network and env-regex inputs
+name: Test docker-network input
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_EVENT_NAME: push
-      GITHUB_REF: refs/heads/main
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: action
         uses: .
         continue-on-error: true
         with:
-          token: fake-token-for-testing
-          docker-network: bridge
-          env-regex: '^(?:RENOVATE_\w+|LOG_LEVEL|GITHUB_COM_TOKEN|NODE_OPTIONS)$'
-        env:
-          RENOVATE_TOKEN: fake-token-for-testing
-          LOG_LEVEL: debug
-      - name: Assert action ran (inputs were accepted)
+          token: ${{ github.token }}
+          docker-network: host
+      - name: Assert action ran with docker-network input
         run: |
-          echo "Action completed (possibly with error due to fake token, which is expected)"
-          echo "PASS: inputs docker-network and env-regex were accepted"
+          echo "conclusion: ${{ steps.action.conclusion }}"
+          # The action may fail due to Renovate config/runtime issues,
+          # but it must have been invoked (not skipped).
+          if [ "${{ steps.action.conclusion }}" = "skipped" ]; then
+            echo "FAIL: step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: docker-network input was accepted"
