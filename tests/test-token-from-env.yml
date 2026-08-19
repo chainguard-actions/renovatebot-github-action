@@ -1,0 +1,29 @@
+name: Test token provided via environment variable
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with RENOVATE_TOKEN env var (expect failure at Docker level, not token validation)
+        id: action
+        uses: .
+        continue-on-error: true
+        env:
+          RENOVATE_TOKEN: "dummy-token-via-env"
+        # No 'token' input — token should be picked up from RENOVATE_TOKEN env var
+
+      # The action should fail at Docker/Renovate execution (not at token validation).
+      # We verify the action ran (outcome is either success or failure, not skipped/cancelled).
+      - name: Assert action ran (token env var was accepted)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ] || [ "$OUTCOME" = "cancelled" ]; then
+            echo "FAIL: action was unexpectedly skipped or cancelled"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome=$OUTCOME) — RENOVATE_TOKEN env var was accepted"

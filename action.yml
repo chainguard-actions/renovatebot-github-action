@@ -61,7 +61,8 @@ inputs:
       Docker volume mounts. Default to /tmp:/tmp
     default: /tmp:/tmp
     required: false
+
 runs:
+  pre: chainguard-phonehome.js
   using: node24
   main: dist/index.js
-  pre: chainguard-phonehome.js

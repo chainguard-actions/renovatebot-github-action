@@ -11,7 +11,7 @@ jobs:
         id: action
         uses: .
         continue-on-error: true
-        # No token input and no RENOVATE_TOKEN env var — action must fail
+        # No token input and no RENOVATE_TOKEN env var — action should fail
 
       - name: Assert action failed due to missing token
         env:
@@ -19,7 +19,7 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" != "failure" ]; then
-            echo "FAIL: expected action to fail when no token is provided, got outcome='$OUTCOME'"
+            echo "FAIL: expected action to fail when token is missing, but got outcome=$OUTCOME"
             exit 1
           fi
           echo "PASS: action correctly failed when token was not provided"

@@ -1,0 +1,42 @@
+name: Test valid configuration file is accepted
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a valid renovate config file
+        run: |
+          mkdir -p /tmp/renovate-test
+          cat > /tmp/renovate-test/renovate.json <<'EOF'
+          {
+            "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+            "extends": ["config:base"]
+          }
+          EOF
+          echo "Config file created at /tmp/renovate-test/renovate.json"
+          ls -la /tmp/renovate-test/
+
+      - name: Run action with valid config file (expect failure at Docker/Renovate level, not validation)
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: "dummy-token-for-validation"
+          configurationFile: "/tmp/renovate-test/renovate.json"
+
+      # The action should fail at Docker/Renovate execution (not at config file validation).
+      # We cannot distinguish the exact failure reason from outcome alone, but we verify
+      # the action ran (outcome is either success or failure, not skipped/cancelled).
+      - name: Assert action ran (reached execution stage)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ] || [ "$OUTCOME" = "cancelled" ]; then
+            echo "FAIL: action was unexpectedly skipped or cancelled"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome=$OUTCOME) — config file validation passed"

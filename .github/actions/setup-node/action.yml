@@ -15,7 +15,7 @@ runs:
       env:
         CACHE_KEY_HASH: ${{ hashFiles('.node-version', 'pnpm-lock.yaml') }}
       run: |
-        safe_hash=$(printf '%s' "$CACHE_KEY_HASH" | tr -d '\n\r')
+        safe_hash=$(printf '%s' "${CACHE_KEY_HASH}" | tr -d '\n\r')
         echo "CACHE_KEY=node_modules-${safe_hash}" >> "$GITHUB_ENV"
 
     - name: ♻️ Restore `node_modules`
@@ -31,8 +31,8 @@ runs:
       env:
         CACHE_HIT_VALUE: ${{ (steps.node-modules-restore.outputs.cache-hit == 'true') && 'true' || '' }}
       run: |
-        safe_cache_hit=$(printf '%s' "$CACHE_HIT_VALUE" | tr -d '\n\r')
-        echo "CACHE_HIT=${safe_cache_hit}" >> "$GITHUB_ENV"
+        safe_hit=$(printf '%s' "${CACHE_HIT_VALUE}" | tr -d '\n\r')
+        echo "CACHE_HIT=${safe_hit}" >> "$GITHUB_ENV"
 
     - name: ⚙️ Setup pnpm
       uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9

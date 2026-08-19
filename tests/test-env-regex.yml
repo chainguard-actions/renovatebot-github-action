@@ -7,13 +7,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run action with env-regex input
+      - name: Run action with custom env-regex (expect failure due to no real token/Docker, not due to env-regex)
         id: action
         uses: .
         continue-on-error: true
         with:
           token: fake-token-for-testing
-          env-regex: '^(?:RENOVATE_\w+|LOG_LEVEL|GITHUB_COM_TOKEN)$'
+          env-regex: '^(?:RENOVATE_\w+|LOG_LEVEL|GITHUB_COM_TOKEN|NODE_OPTIONS)$'
           renovate-version: '43'
           renovate-image: ghcr.io/renovatebot/renovate
           docker-volumes: /tmp:/tmp
@@ -23,6 +23,8 @@ jobs:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
+          # The action may fail due to Docker/credentials, but it should not
+          # fail because env-regex was rejected as an input.
           if [ -z "$OUTCOME" ]; then
             echo "FAIL: step outcome was not set"
             exit 1

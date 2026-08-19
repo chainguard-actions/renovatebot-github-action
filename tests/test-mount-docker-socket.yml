@@ -7,13 +7,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run action with mount-docker-socket input
+      - name: Run action with mount-docker-socket enabled
         id: action
         uses: .
         continue-on-error: true
         with:
           token: fake-token-for-testing
-          mount-docker-socket: 'true'
+          mount-docker-socket: true
           docker-socket-host-path: /var/run/docker.sock
           renovate-version: '43'
           renovate-image: ghcr.io/renovatebot/renovate
@@ -24,6 +24,8 @@ jobs:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
+          # The action may fail due to Docker/credentials, but it should not
+          # fail because mount-docker-socket was rejected as an input.
           if [ -z "$OUTCOME" ]; then
             echo "FAIL: step outcome was not set"
             exit 1
