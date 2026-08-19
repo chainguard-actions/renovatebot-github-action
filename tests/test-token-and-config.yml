@@ -1,0 +1,34 @@
+name: Test token and configurationFile inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a minimal Renovate config file
+        run: |
+          cat > /tmp/renovate-config.json << 'EOF'
+          {
+            "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+            "extends": ["config:base"],
+            "dryRun": "full",
+            "autodiscover": false,
+            "repositories": []
+          }
+          EOF
+      - name: Run Renovate with token and configurationFile inputs
+        id: action
+        uses: .
+        env:
+          RENOVATE_DRY_RUN: full
+          RENOVATE_AUTODISCOVER: "false"
+          RENOVATE_REPOSITORIES: "[]"
+          LOG_LEVEL: info
+        with:
+          token: ${{ github.token }}
+          configurationFile: /tmp/renovate-config.json
+          renovate-version: "43"
+      - name: Assert action completed successfully
+        run: |
+          echo "PASS: Renovate action with token and configurationFile completed without error"
