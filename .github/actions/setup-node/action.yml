@@ -1,0 +1,61 @@
+name: 'Setup Node.js'
+description: 'Setup Node and install dependencies using cache'
+inputs:
+  save-cache:
+    description: 'Save cache when needed'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: ⚙️ Calculate `CACHE_KEY`
+      shell: bash
+      run: |
+        echo 'CACHE_KEY=node_modules-${{
+          hashFiles('.node-version', 'pnpm-lock.yaml')
+        }}' >> "$GITHUB_ENV"
+
+    - name: ♻️ Restore `node_modules`
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      id: node-modules-restore
+      with:
+        path: node_modules
+        key: ${{ env.CACHE_KEY }}
+        enableCrossOsArchive: true
+
+    - name: Calculate `CACHE_HIT`
+      shell: bash
+      env:
+        CACHE_HIT_RAW: ${{ (steps.node-modules-restore.outputs.cache-hit == 'true') && 'true' || '' }}
+      run: |
+        safe=$(printf '%s' "$CACHE_HIT_RAW" | tr -d '\n\r')
+        echo "CACHE_HIT=$safe" >> "$GITHUB_ENV"
+
+    - name: ⚙️ Setup pnpm
+      uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      with:
+        standalone: true
+
+    - name: ⚙️ Setup Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: .node-version
+        cache: ${{ env.CACHE_HIT != 'true' && 'pnpm' || '' }}
+
+    - name: 📥 Install dependencies
+      if: env.CACHE_HIT != 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile
+      env:
+        # Other environment variables
+        HUSKY: '0' # By default do not run HUSKY install
+
+    - name: ♻️ Write `node_modules` cache
+      if: inputs.save-cache == 'true' && env.CACHE_HIT != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: node_modules
+        key: ${{ env.CACHE_KEY }}
+        enableCrossOsArchive: true

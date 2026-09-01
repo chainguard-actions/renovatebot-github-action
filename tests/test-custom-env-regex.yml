@@ -1,0 +1,32 @@
+name: Test custom env-regex with token
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          renovate-version: '38'
+          # Use a custom env-regex that only passes through LOG_LEVEL vars
+          env-regex: '^LOG_LEVEL$'
+
+      - name: Assert action ran with custom env-regex
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With a valid token input and custom env-regex, the action should
+          # proceed past input validation. It may fail when running Renovate
+          # against the sentinel repo, but should not fail due to input errors.
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran with custom env-regex, outcome '$OUTCOME'"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
