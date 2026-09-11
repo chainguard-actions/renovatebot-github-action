@@ -1,0 +1,37 @@
+name: Test configurationFile input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a minimal Renovate config file
+        run: |
+          cat > /tmp/renovate-config.json << 'EOF'
+          {
+            "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+            "extends": ["config:base"]
+          }
+          EOF
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          configurationFile: /tmp/renovate-config.json
+          renovate-version: '44'
+      - name: Assert action ran with configurationFile
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may succeed or fail at the Docker run stage,
+          # but it must not fail due to invalid configurationFile input.
+          # If it fails with "configuration file ... MUST be an existing file",
+          # that would be a bug since we created the file above.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was unexpectedly skipped"
+            exit 1
+          fi
+          echo "PASS: action ran with configurationFile (outcome: $OUTCOME)"

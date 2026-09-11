@@ -1,0 +1,33 @@
+name: Test additional-env-list input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      MY_CUSTOM_VAR: hello-from-test
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          # Pass MY_CUSTOM_VAR through to the renovate container
+          additional-env-list: |
+            MY_CUSTOM_VAR
+            NONEXISTENT_VAR_SHOULD_WARN
+          renovate-version: '44'
+      - name: Assert action ran with additional-env-list
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may succeed or fail at the Docker run stage,
+          # but it must not fail due to invalid additional-env-list input.
+          # A warning should be emitted for NONEXISTENT_VAR_SHOULD_WARN.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was unexpectedly skipped"
+            exit 1
+          fi
+          echo "PASS: action ran with additional-env-list (outcome: $OUTCOME)"

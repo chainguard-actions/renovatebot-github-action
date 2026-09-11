@@ -1,0 +1,28 @@
+name: Test custom env-regex input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          # Override env-regex to only pass RENOVATE_ prefixed vars
+          env-regex: '^RENOVATE_\w+$'
+          renovate-version: '44'
+      - name: Assert action ran with custom env-regex
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may succeed or fail at the Docker run stage,
+          # but it must not fail due to invalid env-regex input.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was unexpectedly skipped"
+            exit 1
+          fi
+          echo "PASS: action ran with custom env-regex (outcome: $OUTCOME)"

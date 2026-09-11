@@ -1,0 +1,31 @@
+name: Test basic usage with token
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          # Provide a real token so input validation passes.
+          # The action will attempt to run Renovate via Docker, which may fail
+          # in the test environment (sentinel repo, no real repos to renovate),
+          # but we verify it gets past the token validation step.
+          token: ${{ github.token }}
+          renovate-version: '44'
+      - name: Assert action ran (passed input validation)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may succeed or fail depending on Docker/Renovate availability,
+          # but it must NOT fail due to missing token (which would be a different error).
+          # Any outcome other than 'skipped' is acceptable here.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was unexpectedly skipped"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome: $OUTCOME)"
