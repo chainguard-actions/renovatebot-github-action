@@ -25,6 +25,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v46.2.6 | [`v46.2.6`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.2.6) | [`37beffd`](https://github.com/renovatebot/github-action/commit/37beffda261423addd537c33f2d126df7f6ffbab) |
 | v46.3.0 | [`v46.3.0`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.0) | [`c314dda`](https://github.com/renovatebot/github-action/commit/c314dda4a9a93b08239ec978f2043b9a433b9ac4) |
 | v46.3.1 | [`v46.3.1`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.1) | [`dcfba84`](https://github.com/renovatebot/github-action/commit/dcfba84a42d1b5d5e49bf131b1bf53511851a123) |
+| v46.3.2 | [`v46.3.2`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.2) | [`e262641`](https://github.com/renovatebot/github-action/commit/e26264186543fd355dc60776e21f7fbb67ce6f85) |
 
 ## Privacy
 
