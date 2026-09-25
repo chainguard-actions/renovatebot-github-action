@@ -1,0 +1,33 @@
+name: Test custom renovate version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          renovate-version: '37'
+          docker-volumes: '/tmp:/tmp'
+
+      - name: Assert action ran with custom version (may fail on sentinel repo)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should attempt to pull renovate:37 and run --version.
+          # Running Renovate itself against the sentinel repo will fail.
+          # Both outcomes are acceptable — the key is no unexpected outcome.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom version"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected on sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

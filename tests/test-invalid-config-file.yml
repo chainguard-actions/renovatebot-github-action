@@ -1,0 +1,29 @@
+name: Test invalid configurationFile error
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          configurationFile: /tmp/nonexistent-renovate-config.json
+          renovate-version: '38'
+
+      - name: Assert action failed due to missing config file
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action validates that the configurationFile exists before running.
+          # Since /tmp/nonexistent-renovate-config.json does not exist, it should fail.
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail when configurationFile does not exist, got '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when configurationFile does not exist"
