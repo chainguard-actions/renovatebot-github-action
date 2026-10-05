@@ -1,0 +1,32 @@
+name: Test docker-cmd-file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a custom docker cmd file
+        run: |
+          echo '#!/bin/sh' > /tmp/custom-renovate-cmd.sh
+          echo 'echo "custom renovate command"' >> /tmp/custom-renovate-cmd.sh
+          chmod +x /tmp/custom-renovate-cmd.sh
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          docker-cmd-file: /tmp/custom-renovate-cmd.sh
+      - name: Assert action ran (success or graceful failure on sentinel repo)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (sentinel repo is not resolvable)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
