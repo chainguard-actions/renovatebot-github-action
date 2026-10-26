@@ -1,0 +1,56 @@
+name: Test basic usage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          case "$*" in
+            *--version*) echo "renovate 99.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          rm -f /tmp/docker-calls.log
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: dummy-renovate-token
+      - name: Assert docker invocations
+        run: |
+          echo "--- docker calls ---"
+          cat /tmp/docker-calls.log || { echo "FAIL: docker never called"; exit 1; }
+          if [ "$(wc -l < /tmp/docker-calls.log)" -ne 2 ]; then
+            echo "FAIL: expected exactly 2 docker invocations"
+            exit 1
+          fi
+          VERSION_CALL="$(sed -n 1p /tmp/docker-calls.log)"
+          RUN_CALL="$(sed -n 2p /tmp/docker-calls.log)"
+          if [ "$VERSION_CALL" != "run --env FORCE_COLOR=3 --rm ghcr.io/renovatebot/renovate:44 --version" ]; then
+            echo "FAIL: unexpected version call: $VERSION_CALL"
+            exit 1
+          fi
+          for want in "run " "--env RENOVATE_TOKEN=dummy-renovate-token" "--env FORCE_COLOR=3" "--volume /tmp:/tmp" "--rm ghcr.io/renovatebot/renovate:44"; do
+            case "$RUN_CALL" in
+              *"$want"*) echo "found: $want" ;;
+              *) echo "FAIL: missing '$want' in run call"; exit 1 ;;
+            esac
+          done
+          case "$RUN_CALL" in
+            *ghcr.io/renovatebot/renovate:44) ;;
+            *) echo "FAIL: image should be the last argument"; exit 1 ;;
+          esac
+          for bad in "--user" "--network" "--group-add" "RENOVATE_CONFIG_FILE"; do
+            case "$RUN_CALL" in
+              *"$bad"*) echo "FAIL: unexpected '$bad' in run call"; exit 1 ;;
+            esac
+          done
+          echo "PASS"

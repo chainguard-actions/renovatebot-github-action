@@ -1,0 +1,54 @@
+name: Test configuration file and docker options
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          case "$*" in
+            *--version*) echo "renovate 99.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          rm -f /tmp/docker-calls.log
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: dummy-renovate-token
+          configurationFile: tests/fixtures/renovate-config.json
+          docker-cmd-file: tests/fixtures/renovate-entrypoint.sh
+          docker-user: root
+          docker-network: my-test-net
+          docker-volumes: '/tmp:/tmp ; /opt/cache:/cache'
+      - name: Assert docker run arguments
+        run: |
+          cat /tmp/docker-calls.log || { echo "FAIL: docker never called"; exit 1; }
+          RUN_CALL="$(sed -n 2p /tmp/docker-calls.log)"
+          for want in \
+            "--env RENOVATE_TOKEN=dummy-renovate-token" \
+            "--env RENOVATE_CONFIG_FILE=/github-action/renovate-config.json" \
+            "tests/fixtures/renovate-config.json:/github-action/renovate-config.json" \
+            "tests/fixtures/renovate-entrypoint.sh:/renovate-entrypoint.sh" \
+            "--user root" \
+            "--network my-test-net" \
+            "--volume /tmp:/tmp" \
+            "--volume /opt/cache:/cache"; do
+            case "$RUN_CALL" in
+              *"$want"*) echo "found: $want" ;;
+              *) echo "FAIL: missing '$want' in: $RUN_CALL"; exit 1 ;;
+            esac
+          done
+          case "$RUN_CALL" in
+            *"--rm ghcr.io/renovatebot/renovate:44 /renovate-entrypoint.sh") ;;
+            *) echo "FAIL: expected image followed by cmd file at the end"; exit 1 ;;
+          esac
+          echo "PASS"

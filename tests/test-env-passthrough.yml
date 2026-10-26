@@ -1,0 +1,55 @@
+name: Test environment variable passthrough
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          case "$*" in
+            *--version*) echo "renovate 99.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          rm -f /tmp/docker-calls.log
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        env:
+          RENOVATE_TOKEN: env-provided-token
+          RENOVATE_DRY_RUN: full
+          LOG_LEVEL: debug
+          MY_EXTRA_VAR: extra
+          NOT_PASSED_VAR: hidden
+        with:
+          additional-env-list: |
+            MY_EXTRA_VAR
+      - name: Assert env vars passed through
+        run: |
+          cat /tmp/docker-calls.log || { echo "FAIL: docker never called"; exit 1; }
+          RUN_CALL="$(sed -n 2p /tmp/docker-calls.log)"
+          for want in \
+            "--env RENOVATE_TOKEN=env-provided-token" \
+            "--env RENOVATE_DRY_RUN " \
+            "--env LOG_LEVEL " \
+            "--env MY_EXTRA_VAR "; do
+            case "$RUN_CALL" in
+              *"$want"*) echo "found: $want" ;;
+              *) echo "FAIL: missing '$want' in: $RUN_CALL"; exit 1 ;;
+            esac
+          done
+          case "$RUN_CALL" in
+            *NOT_PASSED_VAR*) echo "FAIL: NOT_PASSED_VAR should not be passed"; exit 1 ;;
+          esac
+          if [ "$(echo "$RUN_CALL" | grep -o 'RENOVATE_TOKEN' | wc -l)" -ne 1 ]; then
+            echo "FAIL: RENOVATE_TOKEN should appear exactly once"
+            exit 1
+          fi
+          echo "PASS"

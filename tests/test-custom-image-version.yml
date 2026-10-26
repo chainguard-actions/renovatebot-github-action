@@ -1,0 +1,45 @@
+name: Test custom renovate image and version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          case "$*" in
+            *--version*) echo "renovate 99.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          rm -f /tmp/docker-calls.log
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: dummy-renovate-token
+          renovate-image: example.org/custom/renovate
+          renovate-version: 1.2.3-full
+      - name: Assert custom image reference used
+        run: |
+          cat /tmp/docker-calls.log || { echo "FAIL: docker never called"; exit 1; }
+          VERSION_CALL="$(sed -n 1p /tmp/docker-calls.log)"
+          RUN_CALL="$(sed -n 2p /tmp/docker-calls.log)"
+          if [ "$VERSION_CALL" != "run --env FORCE_COLOR=3 --rm example.org/custom/renovate:1.2.3-full --version" ]; then
+            echo "FAIL: unexpected version call: $VERSION_CALL"
+            exit 1
+          fi
+          case "$RUN_CALL" in
+            *"--rm example.org/custom/renovate:1.2.3-full") echo "PASS" ;;
+            *) echo "FAIL: run call does not end with custom image: $RUN_CALL"; exit 1 ;;
+          esac
+          if grep -q "ghcr.io/renovatebot/renovate" /tmp/docker-calls.log; then
+            echo "FAIL: default image should not be used"
+            exit 1
+          fi

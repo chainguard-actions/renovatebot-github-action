@@ -1,0 +1,63 @@
+name: Test mount-docker-socket
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          case "$*" in
+            *--version*) echo "renovate 99.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          rm -f /tmp/docker-calls.log
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - name: Create a unix socket and ensure a docker group exists
+        run: |
+          SOCK=/tmp/fake-docker.sock
+          rm -f "$SOCK"
+          if command -v python3 >/dev/null 2>&1; then
+            python3 -c "import socket; s=socket.socket(socket.AF_UNIX); s.bind('$SOCK')"
+          elif command -v perl >/dev/null 2>&1; then
+            perl -MIO::Socket::UNIX -e "IO::Socket::UNIX->new(Type=>SOCK_STREAM(), Local=>'$SOCK', Listen=>1) or die"
+          else
+            echo "FAIL: no tool available to create a unix socket"; exit 1
+          fi
+          [ -S "$SOCK" ] || { echo "FAIL: socket not created"; exit 1; }
+          SUDO=""
+          [ "$(id -u)" -ne 0 ] && SUDO="sudo"
+          if ! grep -qE '^docker:x:[1-9][0-9]*:' /etc/group; then
+            echo 'docker:x:4242:' | $SUDO tee -a /etc/group >/dev/null
+          fi
+          grep -E '^docker:x:' /etc/group
+      - id: action
+        uses: .
+        with:
+          token: dummy-renovate-token
+          mount-docker-socket: 'true'
+          docker-socket-host-path: /tmp/fake-docker.sock
+      - name: Assert docker socket mounted and group added
+        run: |
+          cat /tmp/docker-calls.log || { echo "FAIL: docker never called"; exit 1; }
+          RUN_CALL="$(sed -n 2p /tmp/docker-calls.log)"
+          echo "run call: $RUN_CALL"
+          GID="$(grep -E '^docker:x:[1-9][0-9]*:' /etc/group | head -n1 | cut -d: -f3)"
+          echo "expected docker gid: $GID"
+          for want in \
+            "--volume /tmp/fake-docker.sock:/var/run/docker.sock" \
+            "--group-add $GID" \
+            "--env RENOVATE_TOKEN=dummy-renovate-token"; do
+            case "$RUN_CALL" in
+              *"$want"*) echo "found: $want" ;;
+              *) echo "FAIL: missing '$want'"; exit 1 ;;
+            esac
+          done
+          echo "PASS"

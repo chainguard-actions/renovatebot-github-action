@@ -1,0 +1,52 @@
+name: Test custom env-regex
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          case "$*" in
+            *--version*) echo "renovate 99.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          rm -f /tmp/docker-calls.log
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        env:
+          MYCUSTOM_ALPHA: one
+          MYCUSTOM_BETA: two
+          LOG_LEVEL: debug
+          RENOVATE_DRY_RUN: full
+        with:
+          token: dummy-renovate-token
+          env-regex: '^MYCUSTOM_\w+$'
+      - name: Assert env-regex overrides the default filter
+        run: |
+          cat /tmp/docker-calls.log || { echo "FAIL: docker never called"; exit 1; }
+          RUN_CALL="$(sed -n 2p /tmp/docker-calls.log)"
+          echo "run call: $RUN_CALL"
+          for want in \
+            "--env MYCUSTOM_ALPHA " \
+            "--env MYCUSTOM_BETA " \
+            "--env RENOVATE_TOKEN=dummy-renovate-token"; do
+            case "$RUN_CALL" in
+              *"$want"*) echo "found: $want" ;;
+              *) echo "FAIL: missing '$want'"; exit 1 ;;
+            esac
+          done
+          for unwanted in "LOG_LEVEL" "RENOVATE_DRY_RUN"; do
+            case "$RUN_CALL" in
+              *"$unwanted"*) echo "FAIL: $unwanted should not be passed with custom env-regex"; exit 1 ;;
+            esac
+          done
+          echo "PASS"

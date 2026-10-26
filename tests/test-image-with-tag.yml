@@ -1,0 +1,41 @@
+name: Test renovate image that already includes a tag
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI
+        run: |
+          mkdir -p /tmp/fakebin
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          case "$*" in
+            *--version*) echo "renovate 99.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          rm -f /tmp/docker-calls.log
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: dummy-renovate-token
+          renovate-image: ghcr.io/renovatebot/renovate:41.1.0
+          renovate-version: '99'
+      - name: Assert tagged image used verbatim (version ignored)
+        run: |
+          cat /tmp/docker-calls.log || { echo "FAIL: docker never called"; exit 1; }
+          RUN_CALL="$(sed -n 2p /tmp/docker-calls.log)"
+          case "$RUN_CALL" in
+            *"--rm ghcr.io/renovatebot/renovate:41.1.0") ;;
+            *) echo "FAIL: unexpected image in run call: $RUN_CALL"; exit 1 ;;
+          esac
+          if grep -q ":99" /tmp/docker-calls.log; then
+            echo "FAIL: renovate-version should be ignored when image has a tag"
+            exit 1
+          fi
+          echo "PASS"
