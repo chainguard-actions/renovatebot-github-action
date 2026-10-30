@@ -1,0 +1,50 @@
+name: Test custom image, version, user, network and volumes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          T="${RUNNER_TEMP:-/tmp}"
+          mkdir -p "$T/fakebin"
+          LOG="$T/docker-calls.log"
+          : > "$LOG"
+          cat > "$T/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          case "\$*" in
+            *" --version") echo "44.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$T/fakebin/docker"
+          echo "$T/fakebin" >> "$GITHUB_PATH"
+          echo "DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          token: dummy-token-123
+          renovate-image: example.com/my/renovate
+          renovate-version: 41.2.3-full
+          docker-user: "1000:1000"
+          docker-network: my-net
+          docker-volumes: "/tmp:/tmp ; /data:/data"
+      - name: Assert docker options
+        run: |
+          cat "$DOCKER_LOG"
+          VERSION_CALL=$(sed -n 1p "$DOCKER_LOG")
+          MAIN_CALL=$(sed -n 2p "$DOCKER_LOG")
+          if [ "$VERSION_CALL" != "run --env FORCE_COLOR=3 --rm example.com/my/renovate:41.2.3-full --version" ]; then
+            echo "FAIL: unexpected version call: $VERSION_CALL"
+            exit 1
+          fi
+          for expected in "--user 1000:1000" "--volume /tmp:/tmp" "--volume /data:/data" "--network my-net" "--rm example.com/my/renovate:41.2.3-full"; do
+            if ! echo "$MAIN_CALL" | grep -qF -- "$expected"; then
+              echo "FAIL: main call missing '$expected'"
+              exit 1
+            fi
+          done
+          echo "PASS"

@@ -1,0 +1,45 @@
+name: Test docker-cmd-file overrides container command
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          T="${RUNNER_TEMP:-/tmp}"
+          mkdir -p "$T/fakebin"
+          LOG="$T/docker-calls.log"
+          : > "$LOG"
+          cat > "$T/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          case "\$*" in
+            *" --version") echo "44.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$T/fakebin/docker"
+          echo "$T/fakebin" >> "$GITHUB_PATH"
+          echo "DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          token: dummy-token-123
+          docker-cmd-file: ${{ github.workspace }}/tests/fixtures/renovate-entrypoint.sh
+      - name: Assert cmd file mounted and used as command
+        env:
+          CMD: ${{ github.workspace }}/tests/fixtures/renovate-entrypoint.sh
+        run: |
+          cat "$DOCKER_LOG"
+          MAIN_CALL=$(sed -n 2p "$DOCKER_LOG")
+          if ! echo "$MAIN_CALL" | grep -qF -- "--volume $CMD:/renovate-entrypoint.sh"; then
+            echo "FAIL: cmd file not mounted"
+            exit 1
+          fi
+          case "$MAIN_CALL" in
+            *"--rm ghcr.io/renovatebot/renovate:44 /renovate-entrypoint.sh") ;;
+            *) echo "FAIL: command should follow the image"; exit 1 ;;
+          esac
+          echo "PASS"

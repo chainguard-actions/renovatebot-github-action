@@ -1,0 +1,43 @@
+name: Test configurationFile input mounts the config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          T="${RUNNER_TEMP:-/tmp}"
+          mkdir -p "$T/fakebin"
+          LOG="$T/docker-calls.log"
+          : > "$LOG"
+          cat > "$T/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          case "\$*" in
+            *" --version") echo "44.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$T/fakebin/docker"
+          echo "$T/fakebin" >> "$GITHUB_PATH"
+          echo "DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          token: dummy-token-123
+          configurationFile: ${{ github.workspace }}/tests/fixtures/renovate-config.json
+      - name: Assert config file is mounted and referenced
+        env:
+          CFG: ${{ github.workspace }}/tests/fixtures/renovate-config.json
+        run: |
+          cat "$DOCKER_LOG"
+          MAIN_CALL=$(sed -n 2p "$DOCKER_LOG")
+          for expected in "--env RENOVATE_CONFIG_FILE=/github-action/renovate-config.json" "--volume $CFG:/github-action/renovate-config.json" "--env RENOVATE_TOKEN=dummy-token-123"; do
+            if ! echo "$MAIN_CALL" | grep -qF -- "$expected"; then
+              echo "FAIL: main call missing '$expected'"
+              exit 1
+            fi
+          done
+          echo "PASS"

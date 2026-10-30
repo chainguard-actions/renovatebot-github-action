@@ -1,0 +1,47 @@
+name: Test renovate-image containing a tag ignores renovate-version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          T="${RUNNER_TEMP:-/tmp}"
+          mkdir -p "$T/fakebin"
+          LOG="$T/docker-calls.log"
+          : > "$LOG"
+          cat > "$T/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          case "\$*" in
+            *" --version") echo "44.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$T/fakebin/docker"
+          echo "$T/fakebin" >> "$GITHUB_PATH"
+          echo "DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          token: dummy-token-123
+          renovate-image: ghcr.io/renovatebot/renovate:43.1.0
+          renovate-version: "99"
+      - name: Assert full image reference used as-is
+        run: |
+          cat "$DOCKER_LOG"
+          if ! sed -n 1p "$DOCKER_LOG" | grep -qF -- "--rm ghcr.io/renovatebot/renovate:43.1.0 --version"; then
+            echo "FAIL: version call does not use the tagged image"
+            exit 1
+          fi
+          if ! sed -n 2p "$DOCKER_LOG" | grep -qF -- "--rm ghcr.io/renovatebot/renovate:43.1.0"; then
+            echo "FAIL: main call does not use the tagged image"
+            exit 1
+          fi
+          if grep -qF ":99" "$DOCKER_LOG"; then
+            echo "FAIL: renovate-version should be ignored"
+            exit 1
+          fi
+          echo "PASS"

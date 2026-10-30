@@ -1,0 +1,56 @@
+name: Test env passthrough (env-regex default and additional-env-list)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          T="${RUNNER_TEMP:-/tmp}"
+          mkdir -p "$T/fakebin"
+          LOG="$T/docker-calls.log"
+          : > "$LOG"
+          cat > "$T/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          case "\$*" in
+            *" --version") echo "44.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$T/fakebin/docker"
+          echo "$T/fakebin" >> "$GITHUB_PATH"
+          echo "DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        env:
+          RENOVATE_TOKEN: env-token-456
+          RENOVATE_DRY_RUN: full
+          LOG_LEVEL: debug
+          MY_EXTRA_VAR: extra
+          NOT_PASSED_VAR: nope
+        with:
+          additional-env-list: |
+            MY_EXTRA_VAR
+      - name: Assert env vars passed through
+        run: |
+          cat "$DOCKER_LOG"
+          MAIN_CALL=$(sed -n 2p "$DOCKER_LOG")
+          for expected in "--env RENOVATE_TOKEN=env-token-456" "--env RENOVATE_DRY_RUN " "--env LOG_LEVEL " "--env MY_EXTRA_VAR "; do
+            if ! echo "$MAIN_CALL" | grep -qF -- "$expected"; then
+              echo "FAIL: main call missing '$expected'"
+              exit 1
+            fi
+          done
+          if echo "$MAIN_CALL" | grep -qF "NOT_PASSED_VAR"; then
+            echo "FAIL: NOT_PASSED_VAR should not be passed"
+            exit 1
+          fi
+          COUNT=$(echo "$MAIN_CALL" | grep -oF "RENOVATE_TOKEN" | wc -l)
+          if [ "$COUNT" -ne 1 ]; then
+            echo "FAIL: RENOVATE_TOKEN should appear exactly once, got $COUNT"
+            exit 1
+          fi
+          echo "PASS"

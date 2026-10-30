@@ -1,0 +1,50 @@
+name: Test token containing whitespace is rejected
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          T="${RUNNER_TEMP:-/tmp}"
+          mkdir -p "$T/fakebin"
+          LOG="$T/docker-calls.log"
+          : > "$LOG"
+          cat > "$T/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          case "\$*" in
+            *" --version") echo "44.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$T/fakebin/docker"
+          echo "$T/fakebin" >> "$GITHUB_PATH"
+          echo "DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          token: "bad token"
+      - name: Assert action failed after version check only
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          cat "$DOCKER_LOG"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected failure for whitespace token"
+            exit 1
+          fi
+          COUNT=$(wc -l < "$DOCKER_LOG")
+          if [ "$COUNT" -ne 1 ]; then
+            echo "FAIL: expected only the version docker call, got $COUNT calls"
+            exit 1
+          fi
+          if ! grep -qF -- "--version" "$DOCKER_LOG"; then
+            echo "FAIL: the single call should be the version check"
+            exit 1
+          fi
+          echo "PASS"

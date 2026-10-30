@@ -1,0 +1,54 @@
+name: Test custom env-regex override
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          T="${RUNNER_TEMP:-/tmp}"
+          mkdir -p "$T/fakebin"
+          LOG="$T/docker-calls.log"
+          : > "$LOG"
+          cat > "$T/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          case "\$*" in
+            *" --version") echo "44.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$T/fakebin/docker"
+          echo "$T/fakebin" >> "$GITHUB_PATH"
+          echo "DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        env:
+          ACTTEST_FOO: foo
+          ACTTEST_BAR: bar
+          RENOVATE_DRY_RUN: full
+        with:
+          token: dummy-token-123
+          env-regex: '^ACTTEST_\w+$'
+      - name: Assert only env vars matching custom regex are passed
+        run: |
+          cat "$DOCKER_LOG"
+          MAIN_CALL=$(grep -v -- ' --version$' "$DOCKER_LOG" | tail -n 1)
+          echo "main call: $MAIN_CALL"
+          for expected in "--env ACTTEST_FOO " "--env ACTTEST_BAR " "--env RENOVATE_TOKEN=dummy-token-123"; do
+            if ! echo "$MAIN_CALL " | grep -qF -- "$expected"; then
+              echo "FAIL: main call missing '$expected'"
+              exit 1
+            fi
+          done
+          if echo "$MAIN_CALL" | grep -qF -- "--env RENOVATE_DRY_RUN"; then
+            echo "FAIL: RENOVATE_DRY_RUN should not be passed with custom env-regex"
+            exit 1
+          fi
+          if echo "$MAIN_CALL" | grep -qF -- "--env LOG_LEVEL"; then
+            echo "FAIL: LOG_LEVEL should not be passed with custom env-regex"
+            exit 1
+          fi
+          echo "PASS"

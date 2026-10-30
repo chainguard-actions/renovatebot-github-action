@@ -1,0 +1,61 @@
+name: Test basic usage (default image, token input)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          T="${RUNNER_TEMP:-/tmp}"
+          mkdir -p "$T/fakebin"
+          LOG="$T/docker-calls.log"
+          : > "$LOG"
+          cat > "$T/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          case "\$*" in
+            *" --version") echo "44.0.0-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$T/fakebin/docker"
+          echo "$T/fakebin" >> "$GITHUB_PATH"
+          echo "DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          token: dummy-token-123
+      - name: Assert docker invocations
+        run: |
+          echo "--- docker calls ---"
+          cat "$DOCKER_LOG"
+          COUNT=$(wc -l < "$DOCKER_LOG")
+          if [ "$COUNT" -ne 2 ]; then
+            echo "FAIL: expected 2 docker calls, got $COUNT"
+            exit 1
+          fi
+          VERSION_CALL=$(sed -n 1p "$DOCKER_LOG")
+          MAIN_CALL=$(sed -n 2p "$DOCKER_LOG")
+          if [ "$VERSION_CALL" != "run --env FORCE_COLOR=3 --rm ghcr.io/renovatebot/renovate:44 --version" ]; then
+            echo "FAIL: unexpected version call: $VERSION_CALL"
+            exit 1
+          fi
+          for expected in "--env RENOVATE_TOKEN=dummy-token-123" "--env FORCE_COLOR=3" "--volume /tmp:/tmp" "--rm ghcr.io/renovatebot/renovate:44"; do
+            if ! echo "$MAIN_CALL" | grep -qF -- "$expected"; then
+              echo "FAIL: main call missing '$expected'"
+              exit 1
+            fi
+          done
+          case "$MAIN_CALL" in
+            *"ghcr.io/renovatebot/renovate:44") ;;
+            *) echo "FAIL: main call should end with the image name"; exit 1 ;;
+          esac
+          for unexpected in "RENOVATE_CONFIG_FILE" "--user" "--network" "docker.sock"; do
+            if echo "$MAIN_CALL" | grep -qF -- "$unexpected"; then
+              echo "FAIL: main call unexpectedly contains '$unexpected'"
+              exit 1
+            fi
+          done
+          echo "PASS"
