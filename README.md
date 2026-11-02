@@ -1,40 +1,592 @@
-# renovatebot/github-action
+# GitHub Action Renovate
 
-GitHub Action to run self-hosted Renovate.
+GitHub Action to run Renovate self-hosted.
 
-Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/renovatebot/github-action](https://github.com/renovatebot/github-action).
+<!-- markdownlint-disable no-inline-html -->
 
-## Versions
+<a name="toc"></a>
 
-| Version | Tag | Upstream commit | Hardening report |
-|---------|-----|-----------------|------------------|
-| v46.1.15 | [`v46.1.15`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.15) | [`8217b3f`](https://github.com/renovatebot/github-action/commit/8217b3fc286df088d7c27f3255fe8414463bc0fd) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.1.15/HARDENING.md) |
-| v46.1.16 | [`v46.1.16`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.16) | [`6d859fc`](https://github.com/renovatebot/github-action/commit/6d859fc95779be83a0335ca704879b47e5d79641) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.1.16/HARDENING.md) |
-| v46.1.17 | [`v46.1.17`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.17) | [`dd5302e`](https://github.com/renovatebot/github-action/commit/dd5302ec17783b2fc721b19ae7209b57b1587765) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.1.17/HARDENING.md) |
-| v46.1.18 | [`v46.1.18`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.18) | [`b50d2ba`](https://github.com/renovatebot/github-action/commit/b50d2ba2bd928235abdcc14d06dfafc217f1c565) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.1.18/HARDENING.md) |
-| v46.1.19 | [`v46.1.19`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.19) | [`22e0a16`](https://github.com/renovatebot/github-action/commit/22e0a16091fc706b04affe6ae53d5e3358ac4023) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.1.19/HARDENING.md) |
-| v46.1.20 | [`v46.1.20`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.20) | [`3064367`](https://github.com/renovatebot/github-action/commit/3064367f740a1a91cca218698a63902689cce200) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.1.20/HARDENING.md) |
-| v46.1.21 | [`v46.1.21`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.21) | [`1a96852`](https://github.com/renovatebot/github-action/commit/1a96852b0384df1837619d04c60b2d10d1f9ff08) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.1.21/HARDENING.md) |
-| v46.1.7 | [`v46.1.7`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.1.7) | [`3633ced`](https://github.com/renovatebot/github-action/commit/3633cede7d4d4598438e654eac4a695e46004420) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.1.7/HARDENING.md) |
-| v46.2.0 | [`v46.2.0`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.2.0) | [`973d3e5`](https://github.com/renovatebot/github-action/commit/973d3e5a68e735a444e8c03432b66eedb343c302) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.2.0/HARDENING.md) |
-| v46.2.1 | [`v46.2.1`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.2.1) | [`316d7cd`](https://github.com/renovatebot/github-action/commit/316d7cd859606d6039a2182b7d69199e9b036835) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.2.1/HARDENING.md) |
-| v46.2.2 | [`v46.2.2`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.2.2) | [`e09d604`](https://github.com/renovatebot/github-action/commit/e09d604f8f803bb527bd8321ed5be06c460b8682) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.2.2/HARDENING.md) |
-| v46.2.3 | [`v46.2.3`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.2.3) | [`0a7b686`](https://github.com/renovatebot/github-action/commit/0a7b68676027570f113b1d6e7b69b231b56167ab) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.2.3/HARDENING.md) |
-| v46.2.4 | [`v46.2.4`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.2.4) | [`5402b20`](https://github.com/renovatebot/github-action/commit/5402b206248e5a8c8427a15102702eb9c1793efc) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.2.4/HARDENING.md) |
-| v46.2.5 | [`v46.2.5`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.2.5) | [`39b9141`](https://github.com/renovatebot/github-action/commit/39b914146caeff8cd512e61c8992f1d5913af85c) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.2.5/HARDENING.md) |
-| v46.2.6 | [`v46.2.6`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.2.6) | [`37beffd`](https://github.com/renovatebot/github-action/commit/37beffda261423addd537c33f2d126df7f6ffbab) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.2.6/HARDENING.md) |
-| v46.3.0 | [`v46.3.0`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.0) | [`c314dda`](https://github.com/renovatebot/github-action/commit/c314dda4a9a93b08239ec978f2043b9a433b9ac4) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.0/HARDENING.md) |
-| v46.3.1 | [`v46.3.1`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.1) | [`dcfba84`](https://github.com/renovatebot/github-action/commit/dcfba84a42d1b5d5e49bf131b1bf53511851a123) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.1/HARDENING.md) |
-| v46.3.10 | [`v46.3.10`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.10) | [`2804199`](https://github.com/renovatebot/github-action/commit/2804199d260ad00c1fae0e9e842888369391c776) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.10/HARDENING.md) |
-| v46.3.11 | [`v46.3.11`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.11) | [`43b963b`](https://github.com/renovatebot/github-action/commit/43b963bf5dd5e57f1f95c59765a018d782870211) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.11/HARDENING.md) |
-| v46.3.2 | [`v46.3.2`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.2) | [`e262641`](https://github.com/renovatebot/github-action/commit/e26264186543fd355dc60776e21f7fbb67ce6f85) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.2/HARDENING.md) |
-| v46.3.3 | [`v46.3.3`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.3) | [`9fea9f0`](https://github.com/renovatebot/github-action/commit/9fea9f0fbf80401026d11d03911d62b1f70fef1f) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.3/HARDENING.md) |
-| v46.3.4 | [`v46.3.4`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.4) | [`f3a31a7`](https://github.com/renovatebot/github-action/commit/f3a31a786096ba6b40d0f0ffe11a494ef73bfa7c) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.4/HARDENING.md) |
-| v46.3.5 | [`v46.3.5`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.5) | [`1cd96b8`](https://github.com/renovatebot/github-action/commit/1cd96b855fee0da6f230617e89dbff0e06ea393a) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.5/HARDENING.md) |
-| v46.3.6 | [`v46.3.6`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.6) | [`6d26fcf`](https://github.com/renovatebot/github-action/commit/6d26fcf0275dc65624cbc3d51fe78bc773f98321) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.6/HARDENING.md) |
-| v46.3.7 | [`v46.3.7`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.7) | [`230ce92`](https://github.com/renovatebot/github-action/commit/230ce922b08968d0a4f6f70f295601daff09ef1d) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.7/HARDENING.md) |
-| v46.3.8 | [`v46.3.8`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.8) | [`f0f41e5`](https://github.com/renovatebot/github-action/commit/f0f41e5f2e706165f6814b1d0f0d0e319de7d1d9) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.8/HARDENING.md) |
-| v46.3.9 | [`v46.3.9`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.9) | [`a63d9a7`](https://github.com/renovatebot/github-action/commit/a63d9a7bc606f7336fd20b47f2f32259a35e6213) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.9/HARDENING.md) |
+## Table of contents
+
+- [Badges](#badges)
+- [Options](#options)
+  - [`additional-env-list`](#additional-env-list)
+  - [`configurationFile`](#configurationfile)
+  - [`docker-cmd-file`](#docker-cmd-file)
+  - [`docker-network`](#docker-network)
+  - [`docker-socket-host-path`](#docker-socket-host-path)
+  - [`docker-user`](#docker-user)
+  - [`docker-volumes`](#docker-volumes)
+  - [`env-regex`](#env-regex)
+  - [`mount-docker-socket`](#mount-docker-socket)
+  - [`token`](#token)
+  - [`renovate-image`](#renovate-image)
+  - [`renovate-version`](#renovate-version)
+- [Example](#example)
+- [Environment Variables](#environment-variables)
+  - [Passing other environment variables](#passing-other-environment-variables)
+- [Persisting the Repository Cache](#persisting-the-repository-cache)
+- [Troubleshooting](#troubleshooting)
+  - [Debug Logging](#debug-logging)
+  - [Special token requirements when using the `github-actions` manager](#special-token-requirements-when-using-the-github-actions-manager)
+
+## Badges
+
+| Badge                                                                                                                                                                                                                   | Description  | Service              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------- |
+| <a href="https://github.com/prettier/prettier#readme"><img alt="code style" src="https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square"></a>                                                    | Code style   | Prettier             |
+| <a href="https://conventionalcommits.org"><img alt="Conventional Commits: 1.0.0" src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg?style=flat-square"></a>                                      | Commit style | Conventional Commits |
+| <a href="https://renovatebot.com"><img alt="Renovate enabled" src="https://img.shields.io/badge/renovate-enabled-brightgreen.svg?style=flat-square"></a>                                                                | Dependencies | Renovate             |
+| <a href="https://github.com/renovatebot/github-action/actions"><img alt="GitHub workflow status" src="https://img.shields.io/github/actions/workflow/status/renovatebot/github-action/build.yml?style=flat-square"></a> | Build        | GitHub Actions       |
+
+## Options
+
+Options can be passed using the inputs of this action or the corresponding environment variables.
+When both are passed, the input takes precedence over the environment variable.
+For the available environment variables, see the Renovate [Self-Hosted Configuration](https://docs.renovatebot.com/self-hosted-configuration/) docs.
+
+### `additional-env-list`
+
+A newline-separated list of environment variable names to pass through to the Renovate container, in addition to those already matched by [`env-regex`](#env-regex).
+See [Passing other environment variables](#passing-other-environment-variables) section for more details.
+
+### `configurationFile`
+
+Configuration file to configure Renovate ("global" config) in JavaScript or JSON format.
+It is recommended to not name it one of the repository configuration filenames listed in the Renovate Docs for [Configuration Options](https://docs.renovatebot.com/configuration-options/).
+
+Config examples can be found in the [example](./example) directory.
+
+The configurations that can be done in this file consists of two parts, as listed below.
+Refer to the links to the [Renovate Docs](https://docs.renovatebot.com/) for all options.
+
+1. [Self-Hosted Configuration Options](https://docs.renovatebot.com/self-hosted-configuration/)
+2. [Configuration Options](https://docs.renovatebot.com/configuration-options/)
+
+The [`branchPrefix`](https://docs.renovatebot.com/configuration-options/#branchprefix) option is important to configure and should be configured to a value other than the default to prevent interference with e.g. the Renovate GitHub App.
+
+If you want to use this with just the single configuration file, make sure to include the following two configuration lines.
+This disables the requirement of a configuration file for the repository and disables onboarding.
+
+```js
+  onboarding: false,
+  requireConfig: 'optional',
+```
+
+### `docker-cmd-file`
+
+Specify a command to run when the image start.
+By default the image run
+`renovate`.
+This option is useful to customize the image before running `renovate`.
+It must be an existing executable file on the local system.
+It will be mounted to the docker container.
+
+For example you can create a simple script like this one (let's call it
+`renovate-entrypoint.sh`).
+
+```sh
+#!/bin/bash
+
+apt update
+
+apt install -y build-essential libpq-dev
+
+runuser -u ubuntu renovate
+```
+
+Now use this action
+
+```yml
+....
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          docker-cmd-file: .github/renovate-entrypoint.sh
+          docker-user: root
+          token: ${{ secrets.RENOVATE_TOKEN }}
+```
+
+### `docker-network`
+
+Specify a network to run container in.
+
+You can use `${{ job.container.network }}` to run renovate container [in the same network as other containers for this job](https://docs.github.com/en/actions/learn-github-actions/contexts#job-context),
+or set it to `host` to run in the same network as github runner, or specify any custom network.
+
+### `docker-socket-host-path`
+
+Allows the overriding of the host path for the Docker socket that is mounted into the container.
+Useful on systems where the host Docker socket is located somewhere other than `/var/run/docker.sock` (the default).
+Only applicable when `mount-docker-socket` is true.
+
+### `docker-user`
+
+Specify a user (or user-id) to run docker command.
+
+You can use it with [`docker-cmd-file`](#docker-cmd-file) in order to start the
+image as root, do some customization and switch back to a unprivileged user.
+
+### `docker-volumes`
+
+Specify volume mounts. Defaults to `/tmp:/tmp`.
+The volume mounts are separated through `;`.
+
+This sample will mount `/tmp:/tmp` and `/foo:/bar`.
+
+```yml
+....
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          docker-volumes: |
+            /tmp:/tmp ;
+            /foo:/bar
+```
+
+### `env-regex`
+
+Allows to configure the regex to define which environment variables are passed to the renovate container.
+See [Passing other environment variables](#passing-other-environment-variables) section for more details.
+
+## `mount-docker-socket`
+
+Default to `false`. If set to `true` the action will mount the Docker socket
+inside the renovate container so that the commands can use Docker. Can be useful
+for `postUpgradeTasks`'s commands. Also add the user inside the renovate
+container to the docker group for socket permissions.
+
+### `token`
+
+[Generate a Personal Access Token (classic)](https://github.com/settings/tokens), with the `repo:public_repo` scope for only public repositories or the `repo` scope for public and private repositories, and add it to _Secrets_ (repository settings) as `RENOVATE_TOKEN`.
+You can also create a token without a specific scope, which gives read-only access to public repositories, for testing.
+This token is only used by Renovate, see the [token configuration](https://docs.renovatebot.com/self-hosted-configuration/#token), and gives it access to the repositories.
+The name of the secret can be anything as long as it matches the argument given to the `token` option.
+
+Fine-grained Personal Access Tokens are now supported, as GitHub has [implemented GraphQL API support for them](https://github.com/github/roadmap/issues/622).
+However, some permission gaps may remain (for example, around `Checks` access), so a classic token is still the safer default if you run into authentication or automerge limitations.
+
+If you want to use the `github-actions` manager, you must setup a [special token](#special-token-requirements-when-using-the-github-actions-manager) with some requirements.
+
+> [!NOTE]
+> [`GITHUB_TOKEN`](https://help.github.com/en/actions/configuring-and-managing-workflows/authenticating-with-the-github_token#permissions-for-the-github_token)
+> can be also used; however, workflows run on RenovateBot's PRs will need to be [manually approved](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/).
+>
+> Additionally, ["Allow GitHub Actions to create and approve pull requests"](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#preventing-github-actions-from-creating-or-approving-pull-requests)
+> needs to be enabled on the repository or organisation level.
+
+### `renovate-image`
+
+The Renovate Docker image name to use.
+If omitted the action will use the `ghcr.io/renovatebot/renovate:<renovate-version>` Docker image name otherwise.
+If a Docker image name is defined, the action will use that name to pull the image.
+
+This sample will use `myproxyhub.domain.com/renovate/renovate:<renovate-version>` image.
+
+```yml
+....
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          renovate-image: myproxyhub.domain.com/renovate/renovate
+          token: ${{ secrets.RENOVATE_TOKEN }}
+```
+
+This sample will use `ghcr.io/renovatebot/renovate:<renovate-version>` image.
+
+```yml
+....
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+```
+
+It is also possible to specify a full Docker image pinned to a version (and optionally, a digest) like so:
+
+```yml
+....
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          renovate-image: ghcr.io/renovatebot/renovate@sha256:0f7ba2b70c5d1a7e2d95b0f6c3d5b4a1e2f6b6a1e2f6b6a1e2f6b6a1e2f6b6a1
+          token: ${{ secrets.RENOVATE_TOKEN }}
+```
+
+### `renovate-version`
+
+The Renovate version to use.
+If omitted the action will use the [`default version`](./action.yml#L28) Docker tag.
+Check [the available tags on Docker Hub](https://hub.docker.com/r/renovate/renovate/tags).
+
+This sample will use `ghcr.io/renovatebot/renovate:44.199.2` image.
+
+```yml
+....
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          renovate-version: 44.199.2
+          token: ${{ secrets.RENOVATE_TOKEN }}
+```
+
+This sample will use `ghcr.io/renovatebot/renovate:full` image.
+
+```yml
+....
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          renovate-version: full
+          token: ${{ secrets.RENOVATE_TOKEN }}
+```
+
+We recommend you pin the version of Renovate to a full version or a full checksum, and use Renovate's regex manager to create PRs to update the pinned version.
+See `.github/workflows/build.yml` for an example of how to do this.
+
+## Example
+
+This example uses a Personal Access Token and will run every 15 minutes.
+The Personal Access token is configured as a GitHub secret named `RENOVATE_TOKEN`.
+This example uses the [`example/renovate-config.js`](./example/renovate-config.js) file as configuration.
+Live examples with more advanced configurations of this action can be found in the following repositories:
+
+- [vidavidorra/renovate](https://github.com/vidavidorra/renovate/blob/main/.github/renovate.json)
+- [jenkinsci/helm-charts](https://github.com/jenkinsci/helm-charts/blob/main/.github/renovate-config.json5)
+
+**Remark** Update the action version to the most current, see [here](https://github.com/renovatebot/github-action/releases/latest) for latest release.
+
+```yml
+name: Renovate
+on:
+  schedule:
+    # The "*" (#42, asterisk) character has special semantics in YAML, so this
+    # string has to be quoted.
+    - cron: '0/15 * * * *'
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          configurationFile: example/renovate-config.js
+          token: ${{ secrets.RENOVATE_TOKEN }}
+```
+
+### Example for GitHub Enterprise
+
+If you want to use the Renovate Action on a GitHub Enterprise instance you have to add the following environment variable:
+
+```yml
+....
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          configurationFile: example/renovate-config.js
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          RENOVATE_ENDPOINT: "https://git.your-company.com/api/v3"
+```
+
+### Example with GitHub App
+
+Instead of using a Personal Access Token (PAT) that is tied to a particular user you can use a [GitHub App](https://docs.github.com/en/developers/apps/building-github-apps) where permissions can be even better tuned.
+[Create a new app](https://docs.github.com/en/developers/apps/creating-a-github-app) and configure the app permissions and your `config.js` as described in the [Renovate documentation](https://docs.renovatebot.com/modules/platform/github/#running-as-a-github-app).
+
+Generate and download a new private key for the app, adding the contents of the downloaded `.pem` file to _Secrets_ (repository settings) with the name `private_key` and app ID as a secret with name `app_id`.
+
+Adjust your Renovate configuration file to specify the username of your bot.
+
+From the Github app configuration page, install the app in your account or your organization's account, and configure the repository access.
+
+Going forward we will be using the [`actions/create-github-app-token` action](https://github.com/actions/create-github-app-token) in order to exchange the GitHub App certificate for an access token that Renovate can use.
+
+The final workflow will look like this:
+
+```yaml
+name: Renovate
+on:
+  schedule:
+    # The "*" (#42, asterisk) character has special semantics in YAML, so this
+    # string has to be quoted.
+    - cron: '0/15 * * * *'
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get token
+        id: get_token
+        uses: actions/create-github-app-token@v1
+        with:
+          private-key: ${{ secrets.private_key }}
+          app-id: ${{ secrets.app_id }}
+          owner: ${{ github.repository_owner }}
+          repositories: 'repo1,repo2'
+
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          configurationFile: example/renovate-config.js
+          token: '${{ steps.get_token.outputs.token }}'
+```
+
+### Commit signing with GitHub App
+
+Renovate can sign commits when deployed as a GitHub App by utilizing GitHub's API-based commits.
+To activate this, ensure that `platformCommit` is set to `enabled` in global config.
+If a configuration file is defined, include `platformCommit: enabled` to activate this feature.
+For example:
+
+```yaml
+- name: Self-hosted Renovate
+  uses: renovatebot/github-action@v46.3.11
+  with:
+    token: '${{ steps.get_token.outputs.token }}'
+  env:
+    RENOVATE_PLATFORM_COMMIT: 'enabled'
+```
+
+## Environment Variables
+
+Environment variables prefixed with `RENOVATE_` are passed through to the Docker container automatically. This prefix is reserved for [Renovate self-hosted configuration](https://docs.renovatebot.com/self-hosted-configuration/), so using it for unrelated credentials can accidentally conflict with a Renovate option.
+
+For custom credentials, use a distinct prefix and add the variable to [`env-regex`](#passing-other-environment-variables).
+
+For example if you wish to pass through some credentials for a [host rule](https://docs.renovatebot.com/configuration-options/#hostrules) to the `config.js` then you should do so like this.
+
+1. In your workflow pass in the environment variable
+
+   ```yml
+   ....
+   jobs:
+     renovate:
+       runs-on: ubuntu-latest
+       steps:
+         - name: Checkout
+           uses: actions/checkout@v7.0.1
+         - name: Self-hosted Renovate
+           uses: renovatebot/github-action@v46.3.11
+           with:
+             configurationFile: example/renovate-config.js
+             token: ${{ secrets.RENOVATE_TOKEN }}
+             env-regex: "^(?:RENOVATE_\\w+|LOG_LEVEL|GITHUB_COM_TOKEN|NODE_OPTIONS|NO_COLOR|(?:HTTPS?|NO)_PROXY|(?:https?|no)_proxy|CUSTOM_TFE_TOKEN)$"
+           env:
+             CUSTOM_TFE_TOKEN: ${{ secrets.MY_TFE_TOKEN }}
+   ```
+
+1. In `example/renovate-config.js` include the hostRules block
+
+   ```js
+   module.exports = {
+     hostRules: [
+       {
+         hostType: 'terraform-module',
+         matchHost: 'app.terraform.io',
+         token: process.env.CUSTOM_TFE_TOKEN,
+       },
+     ],
+   };
+   ```
+
+### Passing other environment variables
+
+There are two ways to pass additional variables through to the Renovate container:
+
+1. **Recommended:** use [`additional-env-list`](#additional-env-list) to list the names of the variables you want forwarded. This keeps the action's default `env-regex` in effect, so you'll continue to receive any future additions to the default allow-list. Variable names that are not present in the environment are silently ignored.
+2. Override [`env-regex`](#env-regex) with a custom regular expression. This gives you full control but also full ownership: if the action's default pattern changes, your override will not pick up those changes, and a typo in the regex can silently drop variables (including `RENOVATE_*` ones).
+
+Example using `additional-env-list` (recommended):
+
+```yml
+....
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.1.0
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          configurationFile: example/renovate-config.js
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          additional-env-list: |
+            AWS_TOKEN
+            MY_OTHER_SECRET
+        env:
+          AWS_TOKEN: ${{ secrets.AWS_TOKEN }}
+          MY_OTHER_SECRET: ${{ secrets.MY_OTHER_SECRET }}
+```
+
+Example using `env-regex` (full override):
+
+```yml
+....
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v46.3.11
+        with:
+          configurationFile: example/renovate-config.js
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          env-regex: "^(?:RENOVATE_\\w+|LOG_LEVEL|GITHUB_COM_TOKEN|NODE_OPTIONS|AWS_TOKEN)$"
+        env:
+          AWS_TOKEN: ${{ secrets.AWS_TOKEN }}
+```
+
+## Persisting the repository cache
+
+In some cases, Renovate can update PRs more frequently than you expect. The [repository cache](https://docs.renovatebot.com/self-hosted-configuration/#repositorycache) can help with this issue. You need a few things to persist this cache in GitHub Actions:
+
+1. Enable the `repositoryCache` [option](https://docs.renovatebot.com/self-hosted-configuration/#repositorycache) via env vars or renovate.json.
+2. Restore `/tmp/renovate/cache/renovate/repository` before Renovate runs.
+3. Save the updated directory under a new cache key after Renovate finishes.
+
+Below is a workflow example with caching.
+
+The primary key includes `github.run_id` and `github.run_attempt`, so each successful run or rerun can save its updated cache. `restore-keys` selects the most recent prior cache. The ownership fix is still required because the restored files are created by the runner but Renovate reads them inside its container as user `12021`.
+
+```yml
+name: Renovate
+on:
+  # This lets you dispatch a renovate job with different cache options if you want to reset or disable the cache manually.
+  workflow_dispatch:
+    inputs:
+      repoCache:
+        description: 'Reset or disable the cache?'
+        type: choice
+        default: enabled
+        options:
+          - enabled
+          - disabled
+          - reset
+  schedule:
+    # Run every 30 minutes:
+    - cron: '0,30 * * * *'
+
+# Adding these as env variables makes it easy to re-use them in different steps and in bash.
+env:
+  # This is the dir renovate provides -- if we set our own directory via cacheDir, we can run into permissions issues.
+  # It is also possible to cache a higher level of the directory, but it has minimal benefit. While renovate execution
+  # time gets faster, it also takes longer to upload the cache as it grows bigger.
+  cache_dir: /tmp/renovate/cache/renovate/repository
+  # This can be manually changed to bust the cache if necessary.
+  cache_key: renovate-cache
+
+jobs:
+  renovate:
+    name: Renovate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Restore renovate cache
+        id: cache-restore
+        if: github.event.inputs.repoCache != 'disabled' && github.event.inputs.repoCache != 'reset'
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: ${{ env.cache_dir }}
+          key: ${{ env.cache_key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ env.cache_key }}-
+
+      - name: Fix restored cache ownership
+        if: steps.cache-restore.outputs.cache-matched-key != ''
+        run: |
+          sudo chown -R 12021:0 /tmp/renovate/
+          ls -R $cache_dir
+
+      - uses: renovatebot/github-action@v46.3.11
+        with:
+          configurationFile: renovate.json5
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          renovate-version: 44.199.2
+        env:
+          # This enables the cache -- if this is set, it's not necessary to add it to renovate.json.
+          RENOVATE_REPOSITORY_CACHE: ${{ github.event.inputs.repoCache || 'enabled' }}
+
+      - name: Save renovate cache
+        if: github.event.inputs.repoCache != 'disabled' && steps.cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: ${{ env.cache_dir }}
+          key: ${{ env.cache_key }}-${{ github.run_id }}-${{ github.run_attempt }}
+```
+
+## Troubleshooting
+
+### Debug logging
+
+In case of issues, it's always a good idea to enable debug logging first.
+To enable debug logging, add the environment variable `LOG_LEVEL: 'debug'` to the action:
+
+```yml
+- name: Self-hosted Renovate
+  uses: renovatebot/github-action@v46.3.11
+  with:
+    configurationFile: example/renovate-config.js
+    token: ${{ secrets.RENOVATE_TOKEN }}
+  env:
+    LOG_LEVEL: 'debug'
+```
+
+### Special token requirements when using the `github-actions` manager
+
+If you want to use the `github-actions` [manager](https://docs.renovatebot.com/modules/manager/github-actions/) in Renovate, ensure that the `token` you provide contains the `workflow` scope.
+Otherwise, GitHub does not allow Renovate to update workflow files and therefore it will be unable to create update PRs for affected packages (like `actions/checkout` or `renovatebot/github-action` itself).
 
 ## Privacy
 

@@ -1,0 +1,25 @@
+name: Test docker-user runs container as given user
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          token: test-token-123
+          renovate-image: node:22-alpine
+          docker-cmd-file: tests/fixtures/check-user.js
+          docker-user: '1234:1234'
+      - name: Assert action succeeded (script validated uid/gid)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          echo "PASS"
