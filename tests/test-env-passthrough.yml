@@ -1,0 +1,45 @@
+name: Test env var passthrough and token from env
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          LOG="$RUNNER_TEMP/fake-docker.log"
+          : > "$LOG"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          last=""
+          for a in "\$@"; do last="\$a"; done
+          if [ "\$last" = "--version" ]; then echo "41.0.0"; fi
+          exit \${FAKE_DOCKER_EXIT:-0}
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+          echo "FAKE_DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        env:
+          RENOVATE_TOKEN: ${{ github.token }}
+          RENOVATE_DRY_RUN: full
+          LOG_LEVEL: debug
+          MY_EXTRA_VAR: hello
+          NOT_PASSED_VAR: nope
+        with:
+          additional-env-list: |
+            MY_EXTRA_VAR
+      - name: Assert env args
+        run: |
+          cat "$FAKE_DOCKER_LOG"
+          main=$(tail -n1 "$FAKE_DOCKER_LOG")
+          for want in "--env RENOVATE_DRY_RUN " "--env LOG_LEVEL " "--env MY_EXTRA_VAR " "--env RENOVATE_TOKEN="; do
+            echo "$main" | grep -qF -- "$want" || { echo "FAIL: missing '$want'"; exit 1; }
+          done
+          if echo "$main" | grep -qF "NOT_PASSED_VAR"; then echo "FAIL: NOT_PASSED_VAR leaked"; exit 1; fi
+          if echo "$main" | grep -qE -- "--env RENOVATE_TOKEN( |$)"; then echo "FAIL: token passed as bare name"; exit 1; fi
+          echo "PASS"

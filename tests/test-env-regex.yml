@@ -1,0 +1,46 @@
+name: Test custom env-regex
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          LOG="$RUNNER_TEMP/fake-docker.log"
+          : > "$LOG"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          last=""
+          for a in "\$@"; do last="\$a"; done
+          if [ "\$last" = "--version" ]; then echo "41.0.0"; fi
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+          echo "FAKE_DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        env:
+          CUSTOM_FOO: foo
+          CUSTOM_BAR: bar
+          LOG_LEVEL: debug
+          OTHER_VAR: nope
+        with:
+          token: ${{ github.token }}
+          env-regex: '^CUSTOM_\w+$'
+      - name: Assert env args follow custom regex
+        run: |
+          cat "$FAKE_DOCKER_LOG"
+          main=$(tail -n1 "$FAKE_DOCKER_LOG")
+          echo "main: $main"
+          for want in "--env CUSTOM_FOO " "--env CUSTOM_BAR " "--env RENOVATE_TOKEN="; do
+            echo "$main" | grep -qF -- "$want" || { echo "FAIL: missing '$want'"; exit 1; }
+          done
+          for bad in "--env LOG_LEVEL" "OTHER_VAR"; do
+            if echo "$main" | grep -qF -- "$bad"; then echo "FAIL: '$bad' should not be passed with custom regex"; exit 1; fi
+          done
+          echo "PASS"

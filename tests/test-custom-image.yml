@@ -1,0 +1,50 @@
+name: Test custom image and version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          LOG="$RUNNER_TEMP/fake-docker.log"
+          : > "$LOG"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          last=""
+          for a in "\$@"; do last="\$a"; done
+          if [ "\$last" = "--version" ]; then echo "41.0.0"; fi
+          exit \${FAKE_DOCKER_EXIT:-0}
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+          echo "FAKE_DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: versioned
+        uses: .
+        with:
+          token: ${{ github.token }}
+          renovate-image: example.com/my/renovate
+          renovate-version: 41.1.2-full
+      - name: Assert image:version combination
+        run: |
+          cat "$FAKE_DOCKER_LOG"
+          grep -qF -- "--rm example.com/my/renovate:41.1.2-full --version" "$FAKE_DOCKER_LOG" || { echo "FAIL: version call image"; exit 1; }
+          tail -n1 "$FAKE_DOCKER_LOG" | grep -qE -- "--rm example.com/my/renovate:41.1.2-full$" || { echo "FAIL: main run image"; exit 1; }
+          : > "$FAKE_DOCKER_LOG"
+          echo "PASS"
+      - id: tagged
+        uses: .
+        with:
+          token: ${{ github.token }}
+          renovate-image: example.com/my/renovate:39.0.0
+          renovate-version: '99'
+      - name: Assert image containing a tag is used as-is
+        run: |
+          cat "$FAKE_DOCKER_LOG"
+          grep -qF -- "--rm example.com/my/renovate:39.0.0 --version" "$FAKE_DOCKER_LOG" || { echo "FAIL: version call image"; exit 1; }
+          tail -n1 "$FAKE_DOCKER_LOG" | grep -qE -- "--rm example.com/my/renovate:39.0.0$" || { echo "FAIL: main run image"; exit 1; }
+          if grep -q ":99" "$FAKE_DOCKER_LOG"; then echo "FAIL: version should be ignored"; exit 1; fi
+          echo "PASS"

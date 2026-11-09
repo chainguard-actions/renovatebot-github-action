@@ -1,0 +1,36 @@
+name: Test configurationFile input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          LOG="$RUNNER_TEMP/fake-docker.log"
+          : > "$LOG"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          last=""
+          for a in "\$@"; do last="\$a"; done
+          if [ "\$last" = "--version" ]; then echo "41.0.0"; fi
+          exit \${FAKE_DOCKER_EXIT:-0}
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+          echo "FAKE_DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          token: ${{ github.token }}
+          configurationFile: tests/fixtures/renovate-config.json
+      - name: Assert config file mounted
+        run: |
+          cat "$FAKE_DOCKER_LOG"
+          main=$(tail -n1 "$FAKE_DOCKER_LOG")
+          echo "$main" | grep -qF -- "--env RENOVATE_CONFIG_FILE=/github-action/renovate-config.json" || { echo "FAIL: config env missing"; exit 1; }
+          echo "$main" | grep -qF -- "--volume $GITHUB_WORKSPACE/tests/fixtures/renovate-config.json:/github-action/renovate-config.json" || { echo "FAIL: config volume missing"; exit 1; }
+          echo "PASS"

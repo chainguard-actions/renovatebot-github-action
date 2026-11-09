@@ -1,0 +1,41 @@
+name: Test docker failure is propagated
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          LOG="$RUNNER_TEMP/fake-docker.log"
+          : > "$LOG"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          last=""
+          for a in "\$@"; do last="\$a"; done
+          if [ "\$last" = "--version" ]; then echo "41.0.0"; fi
+          exit \${FAKE_DOCKER_EXIT:-0}
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+          echo "FAKE_DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        continue-on-error: true
+        env:
+          FAKE_DOCKER_EXIT: '3'
+        with:
+          token: ${{ github.token }}
+      - name: Assert failure after version check
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          cat "$FAKE_DOCKER_LOG"
+          if [ "$OUTCOME" != "failure" ]; then echo "FAIL: expected failure"; exit 1; fi
+          n=$(wc -l < "$FAKE_DOCKER_LOG")
+          if [ "$n" -ne 1 ]; then echo "FAIL: expected to stop after version call, got $n calls"; exit 1; fi
+          echo "PASS"

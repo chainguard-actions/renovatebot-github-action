@@ -1,0 +1,48 @@
+name: Test basic usage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          LOG="$RUNNER_TEMP/fake-docker.log"
+          : > "$LOG"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<EOF
+          #!/bin/sh
+          echo "\$*" >> "$LOG"
+          last=""
+          for a in "\$@"; do last="\$a"; done
+          if [ "\$last" = "--version" ]; then echo "41.0.0"; fi
+          exit \${FAKE_DOCKER_EXIT:-0}
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+          echo "FAKE_DOCKER_LOG=$LOG" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          token: ${{ github.token }}
+      - name: Assert docker invocations
+        run: |
+          echo "--- docker log ---"; cat "$FAKE_DOCKER_LOG"; echo "------------------"
+          n=$(wc -l < "$FAKE_DOCKER_LOG")
+          if [ "$n" -ne 2 ]; then echo "FAIL: expected 2 docker calls, got $n"; exit 1; fi
+          first=$(sed -n 1p "$FAKE_DOCKER_LOG")
+          second=$(sed -n 2p "$FAKE_DOCKER_LOG")
+          if [ "$first" != "run --env FORCE_COLOR=3 --rm ghcr.io/renovatebot/renovate:44 --version" ]; then
+            echo "FAIL: unexpected version call: $first"; exit 1
+          fi
+          echo "$second" | grep -q -- "--env RENOVATE_TOKEN=" || { echo "FAIL: token env missing"; exit 1; }
+          echo "$second" | grep -qF -- "--volume /tmp:/tmp" || { echo "FAIL: default volume missing"; exit 1; }
+          case "$second" in
+            *"--rm ghcr.io/renovatebot/renovate:44") ;;
+            *) echo "FAIL: main run should end with default image"; exit 1 ;;
+          esac
+          if echo "$second" | grep -qE -- "--user|--network|RENOVATE_CONFIG_FILE"; then
+            echo "FAIL: unexpected optional args present"; exit 1
+          fi
+          echo "PASS"
