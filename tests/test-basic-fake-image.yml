@@ -1,0 +1,46 @@
+name: Test basic run with fake renovate image
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      VOL: renovate-test-basic-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build fake renovate image
+        run: |
+          docker version
+          docker build -t fake-renovate:test "$GITHUB_WORKSPACE/tests/fixtures/fake-renovate"
+          docker volume rm -f "$VOL" || true
+          docker volume create "$VOL"
+      - id: renovate
+        uses: .
+        env:
+          RENOVATE_FOO: bar
+          LOG_LEVEL: debug
+          UNRELATED_VAR: should-not-pass
+        with:
+          token: test-token-123
+          renovate-image: fake-renovate:test
+          docker-volumes: ${{ env.VOL }}:/out
+      - name: Assert container received expected environment
+        run: |
+          ENVOUT="$(docker run --rm -v "$VOL:/out" --entrypoint cat fake-renovate:test /out/env)"
+          echo "$ENVOUT"
+          fail=0
+          for want in "RENOVATE_TOKEN=test-token-123" "RENOVATE_FOO=bar" "LOG_LEVEL=debug" "FORCE_COLOR=3"; do
+            if ! echo "$ENVOUT" | grep -qx "$want"; then
+              echo "FAIL: missing '$want'"
+              fail=1
+            fi
+          done
+          if echo "$ENVOUT" | grep -q '^UNRELATED_VAR='; then
+            echo "FAIL: UNRELATED_VAR should not be passed"
+            fail=1
+          fi
+          [ "$fail" = 0 ] || exit 1
+          echo "PASS"
+      - name: Cleanup
+        if: always()
+        run: docker volume rm -f "$VOL" || true

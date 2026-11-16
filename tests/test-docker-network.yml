@@ -1,0 +1,41 @@
+name: Test docker-network attaches the container to a network
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      VOL: renovate-test-network-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build fake renovate image
+        run: |
+          docker build -t fake-renovate:test "$GITHUB_WORKSPACE/tests/fixtures/fake-renovate"
+          docker volume rm -f "$VOL" || true
+          docker volume create "$VOL"
+      - id: renovate
+        uses: .
+        with:
+          token: test-token-123
+          renovate-image: fake-renovate:test
+          docker-volumes: ${{ env.VOL }}:/out
+          docker-network: none
+      - name: Assert container ran with the network option
+        env:
+          OUTCOME: ${{ steps.renovate.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: action did not succeed"
+            exit 1
+          fi
+          ENVOUT="$(docker run --rm -v "$VOL:/out" --entrypoint cat fake-renovate:test /out/env)"
+          echo "$ENVOUT"
+          if ! echo "$ENVOUT" | grep -qx "RENOVATE_TOKEN=test-token-123"; then
+            echo "FAIL: container did not run / token missing"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Cleanup
+        if: always()
+        run: docker volume rm -f "$VOL" || true

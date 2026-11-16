@@ -1,0 +1,35 @@
+name: Test docker-user runs the container as the given user
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      VOL: renovate-test-user-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build fake renovate image and writable volume
+        run: |
+          docker build -t fake-renovate:test "$GITHUB_WORKSPACE/tests/fixtures/fake-renovate"
+          docker volume rm -f "$VOL" || true
+          docker volume create "$VOL"
+          docker run --rm -v "$VOL:/out" --entrypoint chmod fake-renovate:test 777 /out
+      - id: renovate
+        uses: .
+        with:
+          token: test-token-123
+          renovate-image: fake-renovate:test
+          docker-volumes: ${{ env.VOL }}:/out
+          docker-user: "4321:4321"
+      - name: Assert output files are owned by the configured user
+        run: |
+          OWNER="$(docker run --rm -v "$VOL:/out" --entrypoint stat fake-renovate:test -c '%u:%g' /out/env)"
+          echo "owner: $OWNER"
+          if [ "$OWNER" != "4321:4321" ]; then
+            echo "FAIL: expected /out/env to be owned by 4321:4321"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Cleanup
+        if: always()
+        run: docker volume rm -f "$VOL" || true

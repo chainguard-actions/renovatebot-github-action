@@ -1,0 +1,45 @@
+name: Test custom env-regex
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      VOL: renovate-test-envregex-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build fake renovate image
+        run: |
+          docker build -t fake-renovate:test "$GITHUB_WORKSPACE/tests/fixtures/fake-renovate"
+          docker volume rm -f "$VOL" || true
+          docker volume create "$VOL"
+      - id: renovate
+        uses: .
+        env:
+          CUSTOM_ALPHA: one
+          RENOVATE_FOO: should-not-pass
+        with:
+          token: regex-token
+          renovate-image: fake-renovate:test
+          docker-volumes: ${{ env.VOL }}:/out
+          env-regex: '^CUSTOM_\w+$'
+      - name: Assert only regex-matched vars were passed
+        run: |
+          ENVOUT="$(docker run --rm -v "$VOL:/out" --entrypoint cat fake-renovate:test /out/env)"
+          echo "$ENVOUT"
+          fail=0
+          for want in "CUSTOM_ALPHA=one" "RENOVATE_TOKEN=regex-token"; do
+            if ! echo "$ENVOUT" | grep -qx "$want"; then
+              echo "FAIL: missing '$want'"
+              fail=1
+            fi
+          done
+          if echo "$ENVOUT" | grep -q '^RENOVATE_FOO='; then
+            echo "FAIL: RENOVATE_FOO should not match custom env-regex"
+            fail=1
+          fi
+          [ "$fail" = 0 ] || exit 1
+          echo "PASS"
+      - name: Cleanup
+        if: always()
+        run: docker volume rm -f "$VOL" || true

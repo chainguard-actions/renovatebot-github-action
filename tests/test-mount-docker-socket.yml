@@ -1,0 +1,54 @@
+name: Test mount-docker-socket mounts the socket into the container
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      VOL: renovate-test-sock-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build fake renovate image and ensure docker group exists
+        run: |
+          SUDO=""
+          if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+          ls -l /var/run/docker.sock
+          if [ ! -S /var/run/docker.sock ]; then
+            echo "FAIL: /var/run/docker.sock is not a socket in the job container"
+            exit 1
+          fi
+          if ! grep -qE '^docker:x:[1-9][0-9]*:' /etc/group; then
+            GID="$(stat -c '%g' /var/run/docker.sock)"
+            [ "$GID" != "0" ] || GID=999
+            echo "docker:x:${GID}:" | $SUDO tee -a /etc/group
+          fi
+          grep '^docker:' /etc/group
+          docker build -t fake-renovate:test "$GITHUB_WORKSPACE/tests/fixtures/fake-renovate"
+          docker volume rm -f "$VOL" || true
+          docker volume create "$VOL"
+      - id: renovate
+        uses: .
+        with:
+          token: test-token-123
+          renovate-image: fake-renovate:test
+          docker-volumes: ${{ env.VOL }}:/out
+          mount-docker-socket: "true"
+      - name: Assert container ran
+        env:
+          OUTCOME: ${{ steps.renovate.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: action did not succeed"
+            exit 1
+          fi
+          ENVOUT="$(docker run --rm -v "$VOL:/out" --entrypoint cat fake-renovate:test /out/env)"
+          echo "$ENVOUT"
+          if ! echo "$ENVOUT" | grep -qx "RENOVATE_TOKEN=test-token-123"; then
+            echo "FAIL: container did not run / token missing"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Cleanup
+        if: always()
+        run: docker volume rm -f "$VOL" || true

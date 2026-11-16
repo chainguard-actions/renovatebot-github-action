@@ -1,0 +1,37 @@
+name: Test docker-cmd-file passes the mounted command to the container
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      VOL: renovate-test-cmdfile-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build fake renovate image and command file
+        run: |
+          docker build -t fake-renovate:test "$GITHUB_WORKSPACE/tests/fixtures/fake-renovate"
+          docker volume rm -f "$VOL" || true
+          docker volume create "$VOL"
+          mkdir -p /tmp/renovate-cmd-test
+          printf '#!/bin/sh\necho custom renovate cmd\n' > /tmp/renovate-cmd-test/my-renovate-cmd.sh
+          chmod +x /tmp/renovate-cmd-test/my-renovate-cmd.sh
+      - id: renovate
+        uses: .
+        with:
+          token: test-token-123
+          renovate-image: fake-renovate:test
+          docker-volumes: ${{ env.VOL }}:/out
+          docker-cmd-file: /tmp/renovate-cmd-test/my-renovate-cmd.sh
+      - name: Assert container was invoked with the command file path
+        run: |
+          ARGS="$(docker run --rm -v "$VOL:/out" --entrypoint cat fake-renovate:test /out/args)"
+          echo "args: $ARGS"
+          if [ "$ARGS" != "/my-renovate-cmd.sh" ]; then
+            echo "FAIL: expected container argument '/my-renovate-cmd.sh'"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Cleanup
+        if: always()
+        run: docker volume rm -f "$VOL" || true

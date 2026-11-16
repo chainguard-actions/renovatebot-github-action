@@ -1,0 +1,34 @@
+name: Test token from RENOVATE_TOKEN env var
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      VOL: renovate-test-tokenenv-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build fake renovate image
+        run: |
+          docker build -t fake-renovate:test "$GITHUB_WORKSPACE/tests/fixtures/fake-renovate"
+          docker volume rm -f "$VOL" || true
+          docker volume create "$VOL"
+      - id: renovate
+        uses: .
+        env:
+          RENOVATE_TOKEN: env-token-456
+        with:
+          renovate-image: fake-renovate:test
+          docker-volumes: ${{ env.VOL }}:/out
+      - name: Assert token from env was passed
+        run: |
+          ENVOUT="$(docker run --rm -v "$VOL:/out" --entrypoint cat fake-renovate:test /out/env)"
+          echo "$ENVOUT"
+          if ! echo "$ENVOUT" | grep -qx "RENOVATE_TOKEN=env-token-456"; then
+            echo "FAIL: RENOVATE_TOKEN not passed from env"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Cleanup
+        if: always()
+        run: docker volume rm -f "$VOL" || true
