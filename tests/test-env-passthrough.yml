@@ -1,0 +1,61 @@
+name: Test environment variable passthrough via RENOVATE_ vars and additional-env-list
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p /tmp/fakebin
+          rm -f /tmp/fake-docker.log
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker.log
+          case "$*" in
+            *--version*) echo "44.0.0" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        env:
+          RENOVATE_TOKEN: env-token-789
+          RENOVATE_DRY_RUN: full
+          LOG_LEVEL: debug
+          MY_EXTRA_VAR: extra
+          NOT_PASSED_VAR: hidden
+        with:
+          renovate-version: '43'
+          additional-env-list: |
+            MY_EXTRA_VAR
+      - name: Assert docker invocation
+        run: |
+          echo "--- fake docker log ---"
+          cat /tmp/fake-docker.log
+          second=$(sed -n 2p /tmp/fake-docker.log)
+          for expected in \
+            "--env RENOVATE_TOKEN=env-token-789" \
+            "--env RENOVATE_DRY_RUN" \
+            "--env LOG_LEVEL" \
+            "--env MY_EXTRA_VAR" \
+            "--rm ghcr.io/renovatebot/renovate:43"; do
+            if ! echo "$second" | grep -qF -- "$expected"; then
+              echo "FAIL: main command missing '$expected'"
+              exit 1
+            fi
+          done
+          if echo "$second" | grep -qF -- "NOT_PASSED_VAR"; then
+            echo "FAIL: NOT_PASSED_VAR should not be passed"
+            exit 1
+          fi
+          # Token env var must only appear once (as KEY=VALUE, not also as bare passthrough)
+          count=$(echo "$second" | grep -oE -- "--env RENOVATE_TOKEN( |=)" | wc -l)
+          if [ "$count" -ne 1 ]; then
+            echo "FAIL: RENOVATE_TOKEN passed $count times"
+            exit 1
+          fi
+          echo "PASS"

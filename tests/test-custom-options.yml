@@ -1,0 +1,63 @@
+name: Test custom image, config file, cmd file, user, network and volumes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p /tmp/fakebin
+          rm -f /tmp/fake-docker.log
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker.log
+          case "$*" in
+            *--version*) echo "41.0.0" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: dummy-renovate-token-456
+          configurationFile: tests/fixtures/renovate-config.json
+          docker-cmd-file: tests/fixtures/renovate-entrypoint.sh
+          renovate-image: ghcr.io/renovatebot/renovate:41.0.0-full
+          renovate-version: '99'
+          docker-user: root
+          docker-network: my-net
+          docker-volumes: /tmp:/tmp ; /foo:/bar
+      - name: Assert docker invocations
+        run: |
+          echo "--- fake docker log ---"
+          cat /tmp/fake-docker.log
+          first=$(sed -n 1p /tmp/fake-docker.log)
+          second=$(sed -n 2p /tmp/fake-docker.log)
+          if [ "$first" != "run --env FORCE_COLOR=3 --rm ghcr.io/renovatebot/renovate:41.0.0-full --version" ]; then
+            echo "FAIL: image with tag should be used as-is (version ignored): $first"
+            exit 1
+          fi
+          for expected in \
+            "--env RENOVATE_TOKEN=dummy-renovate-token-456" \
+            "--env RENOVATE_CONFIG_FILE=/github-action/renovate-config.json" \
+            "tests/fixtures/renovate-config.json:/github-action/renovate-config.json" \
+            "tests/fixtures/renovate-entrypoint.sh:/renovate-entrypoint.sh" \
+            "--user root" \
+            "--network my-net" \
+            "--volume /tmp:/tmp" \
+            "--volume /foo:/bar" \
+            "--rm ghcr.io/renovatebot/renovate:41.0.0-full /renovate-entrypoint.sh"; do
+            if ! echo "$second" | grep -qF -- "$expected"; then
+              echo "FAIL: main command missing '$expected'"
+              exit 1
+            fi
+          done
+          if echo "$second" | grep -qF -- ":99"; then
+            echo "FAIL: renovate-version should be ignored when image has a tag"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,58 @@
+name: Test custom env-regex controls which env vars are passed through
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p /tmp/fakebin
+          rm -f /tmp/fake-docker.log
+          cat > /tmp/fakebin/docker <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker.log
+          case "$*" in
+            *--version*) echo "44.0.0" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x /tmp/fakebin/docker
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        env:
+          CUSTOMRX_ALPHA: one
+          CUSTOMRX_BETA: two
+          RENOVATE_DRY_RUN: full
+          LOG_LEVEL: debug
+        with:
+          token: input-token-abc
+          env-regex: '^CUSTOMRX_\w+$'
+      - name: Assert docker invocation honors env-regex
+        run: |
+          echo "--- fake docker log ---"
+          cat /tmp/fake-docker.log
+          main=$(grep -F -- "--rm ghcr.io/renovatebot/renovate" /tmp/fake-docker.log | tail -n1)
+          echo "main: $main"
+          if [ -z "$main" ]; then
+            echo "FAIL: no main docker run command recorded"
+            exit 1
+          fi
+          for expected in \
+            "--env CUSTOMRX_ALPHA" \
+            "--env CUSTOMRX_BETA" \
+            "--env RENOVATE_TOKEN=input-token-abc"; do
+            if ! echo "$main" | grep -qF -- "$expected"; then
+              echo "FAIL: main command missing '$expected'"
+              exit 1
+            fi
+          done
+          for unexpected in "--env RENOVATE_DRY_RUN" "--env LOG_LEVEL"; do
+            if echo "$main" | grep -qF -- "$unexpected"; then
+              echo "FAIL: '$unexpected' should not be passed with custom env-regex"
+              exit 1
+            fi
+          done
+          echo "PASS"
