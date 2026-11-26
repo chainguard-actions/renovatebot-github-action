@@ -39,6 +39,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v46.3.7 | [`v46.3.7`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.7) | [`230ce92`](https://github.com/renovatebot/github-action/commit/230ce922b08968d0a4f6f70f295601daff09ef1d) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.7/HARDENING.md) |
 | v46.3.8 | [`v46.3.8`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.8) | [`f0f41e5`](https://github.com/renovatebot/github-action/commit/f0f41e5f2e706165f6814b1d0f0d0e319de7d1d9) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.8/HARDENING.md) |
 | v46.3.9 | [`v46.3.9`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v46.3.9) | [`a63d9a7`](https://github.com/renovatebot/github-action/commit/a63d9a7bc606f7336fd20b47f2f32259a35e6213) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v46.3.9/HARDENING.md) |
+| v47.0.0 | [`v47.0.0`](https://github.com/chainguard-actions/renovatebot-github-action/tree/v47.0.0) | [`7b402fe`](https://github.com/renovatebot/github-action/commit/7b402fe76b7bc4273576663a09be2f0f85266e2f) | [`HARDENING.md`](https://github.com/chainguard-actions/renovatebot-github-action/blob/v47.0.0/HARDENING.md) |
 
 ## Privacy
 
