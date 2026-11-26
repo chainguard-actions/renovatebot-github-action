@@ -1,0 +1,54 @@
+name: Test custom env-regex
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          rm -f /tmp/docker-calls.log
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          for last in "$@"; do :; done
+          if [ "$last" = "--version" ]; then
+            echo "41.99.0"
+          fi
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        env:
+          CUSTOM_ALPHA: one
+          CUSTOM_BETA: two
+          LOG_LEVEL: debug
+          RENOVATE_DRY_RUN: full
+        with:
+          token: input-token-123
+          env-regex: '^CUSTOM_\w+$'
+      - name: Assert env arguments follow custom regex
+        run: |
+          cat /tmp/docker-calls.log
+          second=$(sed -n 2p /tmp/docker-calls.log)
+          echo "run line: $second"
+          for want in \
+            "--env CUSTOM_ALPHA " \
+            "--env CUSTOM_BETA " \
+            "--env RENOVATE_TOKEN=input-token-123" \
+            "--rm ghcr.io/renovatebot/renovate:45"; do
+            case "$second " in
+              *"$want"*) echo "ok: $want" ;;
+              *) echo "FAIL: missing '$want' in: $second"; exit 1 ;;
+            esac
+          done
+          for unwanted in "--env LOG_LEVEL" "--env RENOVATE_DRY_RUN"; do
+            case "$second" in
+              *"$unwanted"*) echo "FAIL: '$unwanted' should not be passed with custom regex"; exit 1 ;;
+            esac
+          done
+          echo "PASS"

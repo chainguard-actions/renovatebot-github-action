@@ -1,0 +1,58 @@
+name: Test env var passthrough (RENOVATE_TOKEN env, regex, additional-env-list)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          rm -f /tmp/docker-calls.log
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          for last in "$@"; do :; done
+          if [ "$last" = "--version" ]; then
+            echo "41.99.0"
+          fi
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        env:
+          RENOVATE_TOKEN: env-token-456
+          RENOVATE_DRY_RUN: full
+          LOG_LEVEL: debug
+          MY_EXTRA_VAR: extra
+          NOT_PASSED_VAR: hidden
+        with:
+          renovate-version: '40'
+          additional-env-list: |
+            MY_EXTRA_VAR
+      - name: Assert env arguments
+        run: |
+          cat /tmp/docker-calls.log
+          second=$(sed -n 2p /tmp/docker-calls.log)
+          for want in \
+            "--env RENOVATE_TOKEN=env-token-456" \
+            "--env RENOVATE_DRY_RUN " \
+            "--env LOG_LEVEL " \
+            "--env MY_EXTRA_VAR " \
+            "--rm ghcr.io/renovatebot/renovate:40"; do
+            case "$second " in
+              *"$want"*) echo "ok: $want" ;;
+              *) echo "FAIL: missing '$want' in: $second"; exit 1 ;;
+            esac
+          done
+          case "$second" in
+            *NOT_PASSED_VAR*) echo "FAIL: NOT_PASSED_VAR should not be passed"; exit 1 ;;
+          esac
+          # token must not also be passed as a bare --env RENOVATE_TOKEN
+          case "$second " in
+            *"--env RENOVATE_TOKEN "*) echo "FAIL: RENOVATE_TOKEN passed twice"; exit 1 ;;
+          esac
+          echo "PASS"

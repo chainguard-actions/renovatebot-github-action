@@ -1,0 +1,55 @@
+name: Test basic usage with token input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI that records invocations
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          rm -f /tmp/docker-calls.log
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          for last in "$@"; do :; done
+          if [ "$last" = "--version" ]; then
+            echo "41.99.0"
+          fi
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: dummy-token-abc123
+      - name: Assert docker invocations
+        run: |
+          echo "--- recorded docker calls ---"
+          cat /tmp/docker-calls.log
+          lines=$(wc -l < /tmp/docker-calls.log)
+          if [ "$lines" -ne 2 ]; then
+            echo "FAIL: expected 2 docker calls, got $lines"; exit 1
+          fi
+          first=$(sed -n 1p /tmp/docker-calls.log)
+          second=$(sed -n 2p /tmp/docker-calls.log)
+          if [ "$first" != "run --env FORCE_COLOR=3 --rm ghcr.io/renovatebot/renovate:45 --version" ]; then
+            echo "FAIL: unexpected version call: $first"; exit 1
+          fi
+          for want in "--env RENOVATE_TOKEN=dummy-token-abc123" "--volume /tmp:/tmp" "--rm ghcr.io/renovatebot/renovate:45"; do
+            case "$second" in
+              *"$want"*) echo "ok: $want" ;;
+              *) echo "FAIL: missing '$want' in: $second"; exit 1 ;;
+            esac
+          done
+          case "$second" in
+            run\ *) ;;
+            *) echo "FAIL: second call is not 'docker run'"; exit 1 ;;
+          esac
+          case "$second" in
+            *"ghcr.io/renovatebot/renovate:45") ;;
+            *) echo "FAIL: image must be the last argument (no cmd)"; exit 1 ;;
+          esac
+          echo "PASS"

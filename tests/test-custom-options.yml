@@ -1,0 +1,62 @@
+name: Test custom image, config file, cmd file, user, network and volumes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI and create input files
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          rm -f /tmp/docker-calls.log
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/docker-calls.log
+          for last in "$@"; do :; done
+          if [ "$last" = "--version" ]; then
+            echo "41.99.0"
+          fi
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+          mkdir -p "$GITHUB_WORKSPACE/test-inputs"
+          echo 'module.exports = { platform: "github" };' > "$GITHUB_WORKSPACE/test-inputs/renovate-config.js"
+          printf '#!/bin/bash\nrenovate\n' > "$GITHUB_WORKSPACE/test-inputs/entrypoint.sh"
+      - id: action
+        uses: .
+        with:
+          token: dummy-token-xyz
+          renovate-image: example.com/custom/renovate:39.1.0
+          configurationFile: test-inputs/renovate-config.js
+          docker-cmd-file: test-inputs/entrypoint.sh
+          docker-user: root
+          docker-network: my-net
+          docker-volumes: "/tmp:/tmp ; /cache:/cache"
+      - name: Assert docker invocation arguments
+        run: |
+          cat /tmp/docker-calls.log
+          first=$(sed -n 1p /tmp/docker-calls.log)
+          second=$(sed -n 2p /tmp/docker-calls.log)
+          if [ "$first" != "run --env FORCE_COLOR=3 --rm example.com/custom/renovate:39.1.0 --version" ]; then
+            echo "FAIL: unexpected version call: $first"; exit 1
+          fi
+          CFG="$GITHUB_WORKSPACE/test-inputs/renovate-config.js"
+          CMD="$GITHUB_WORKSPACE/test-inputs/entrypoint.sh"
+          for want in \
+            "--env RENOVATE_TOKEN=dummy-token-xyz" \
+            "--env RENOVATE_CONFIG_FILE=/github-action/renovate-config.js" \
+            "--volume $CFG:/github-action/renovate-config.js" \
+            "--volume $CMD:/entrypoint.sh" \
+            "--user root" \
+            "--volume /tmp:/tmp" \
+            "--volume /cache:/cache" \
+            "--network my-net" \
+            "--rm example.com/custom/renovate:39.1.0 /entrypoint.sh"; do
+            case "$second" in
+              *"$want"*) echo "ok: $want" ;;
+              *) echo "FAIL: missing '$want' in: $second"; exit 1 ;;
+            esac
+          done
+          echo "PASS"
