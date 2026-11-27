@@ -1,0 +1,62 @@
+name: Test mount-docker-socket adds socket volume and docker group
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker-calls.log
+          case "$*" in
+            *" --version"*) echo "99.9.9-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          rm -f /tmp/fake-docker-calls.log
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - name: Create a unix socket and ensure docker group exists
+        run: |
+          SOCK=/tmp/fake-docker-test.sock
+          rm -f "$SOCK"
+          if command -v python3 >/dev/null 2>&1; then
+            python3 -c "import socket; s=socket.socket(socket.AF_UNIX); s.bind('$SOCK')"
+          else
+            node -e "const s=require('net').createServer(); s.listen('$SOCK', () => process.exit(0));"
+          fi
+          if [ ! -S "$SOCK" ]; then
+            echo "FAIL: could not create socket"; exit 1
+          fi
+          SUDO=""
+          if [ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+          if ! grep -qE '^docker:x:[1-9][0-9]*:' /etc/group; then
+            $SUDO sed -i '/^docker:/d' /etc/group || true
+            echo "docker:x:4242:" | $SUDO tee -a /etc/group >/dev/null
+          fi
+          GID=$(grep -E '^docker:x:[1-9][0-9]*:' /etc/group | head -n1 | cut -d: -f3)
+          echo "docker gid: $GID"
+          echo "DOCKER_GID=$GID" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          token: test-renovate-token
+          mount-docker-socket: 'true'
+          docker-socket-host-path: /tmp/fake-docker-test.sock
+      - name: Assert socket mount and group-add
+        run: |
+          cat /tmp/fake-docker-calls.log
+          run_line=$(sed -n 2p /tmp/fake-docker-calls.log)
+          for want in \
+            "--volume /tmp/fake-docker-test.sock:/var/run/docker.sock" \
+            "--group-add $DOCKER_GID"; do
+            case "$run_line" in
+              *"$want"*) echo "ok: $want" ;;
+              *) echo "FAIL: missing '$want'"; exit 1 ;;
+            esac
+          done
+          echo "PASS"

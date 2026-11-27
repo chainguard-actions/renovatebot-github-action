@@ -1,0 +1,50 @@
+name: Test custom env-regex controls passed environment variables
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      MY_CUSTOM_VAR: hello-custom
+      RENOVATE_SHOULD_NOT_PASS: nope
+      LOG_LEVEL: debug
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker-calls.log
+          case "$*" in
+            *" --version"*) echo "99.9.9-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          rm -f /tmp/fake-docker-calls.log
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: test-renovate-token
+          env-regex: '^MY_CUSTOM_VAR$'
+      - name: Assert env-regex applied
+        run: |
+          cat /tmp/fake-docker-calls.log
+          run_line=$(sed -n 2p /tmp/fake-docker-calls.log)
+          case "$run_line" in
+            *"--env MY_CUSTOM_VAR "*) echo "ok: MY_CUSTOM_VAR passed" ;;
+            *) echo "FAIL: MY_CUSTOM_VAR not passed"; exit 1 ;;
+          esac
+          case "$run_line" in
+            *"RENOVATE_SHOULD_NOT_PASS"*) echo "FAIL: RENOVATE_SHOULD_NOT_PASS should be filtered by custom regex"; exit 1 ;;
+          esac
+          case "$run_line" in
+            *"--env LOG_LEVEL"*) echo "FAIL: LOG_LEVEL should be filtered by custom regex"; exit 1 ;;
+          esac
+          case "$run_line" in
+            *"--env RENOVATE_TOKEN=test-renovate-token"*) echo "ok: token still passed" ;;
+            *) echo "FAIL: token missing"; exit 1 ;;
+          esac
+          echo "PASS"

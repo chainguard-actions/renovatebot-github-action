@@ -1,0 +1,40 @@
+name: Test custom renovate image and version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker-calls.log
+          case "$*" in
+            *" --version"*) echo "99.9.9-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          rm -f /tmp/fake-docker-calls.log
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: test-renovate-token
+          renovate-image: example.registry/custom/renovate
+          renovate-version: 41.2.3-full
+      - name: Assert image and version used
+        run: |
+          cat /tmp/fake-docker-calls.log
+          if [ "$(grep -c 'example.registry/custom/renovate:41.2.3-full' /tmp/fake-docker-calls.log)" -ne 2 ]; then
+            echo "FAIL: expected both docker calls to use example.registry/custom/renovate:41.2.3-full"
+            exit 1
+          fi
+          if grep -q "ghcr.io/renovatebot/renovate" /tmp/fake-docker-calls.log; then
+            echo "FAIL: default image should not be used"
+            exit 1
+          fi
+          echo "PASS"

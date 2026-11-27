@@ -1,0 +1,40 @@
+name: Test renovate image containing a tag overrides version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker-calls.log
+          case "$*" in
+            *" --version"*) echo "99.9.9-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          rm -f /tmp/fake-docker-calls.log
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: test-renovate-token
+          renovate-image: ghcr.io/renovatebot/renovate:40.0.0
+          renovate-version: "45"
+      - name: Assert tagged image used as-is
+        run: |
+          cat /tmp/fake-docker-calls.log
+          if [ "$(grep -c -- '--rm ghcr.io/renovatebot/renovate:40.0.0' /tmp/fake-docker-calls.log)" -ne 2 ]; then
+            echo "FAIL: expected tagged image ghcr.io/renovatebot/renovate:40.0.0 in both calls"
+            exit 1
+          fi
+          if grep -q "renovate:40.0.0:45" /tmp/fake-docker-calls.log; then
+            echo "FAIL: version was appended to an already-tagged image"
+            exit 1
+          fi
+          echo "PASS"

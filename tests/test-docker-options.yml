@@ -1,0 +1,50 @@
+name: Test docker user, network, volumes and command file options
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker-calls.log
+          case "$*" in
+            *" --version"*) echo "99.9.9-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          rm -f /tmp/fake-docker-calls.log
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: test-renovate-token
+          docker-user: root
+          docker-network: my-test-net
+          docker-volumes: "/tmp:/tmp ; /opt/cache:/cache"
+          docker-cmd-file: tests/fixtures/renovate-entrypoint.sh
+      - name: Assert docker options
+        run: |
+          cat /tmp/fake-docker-calls.log
+          run_line=$(sed -n 2p /tmp/fake-docker-calls.log)
+          for want in \
+            "--user root" \
+            "--network my-test-net" \
+            "--volume /tmp:/tmp" \
+            "--volume /opt/cache:/cache" \
+            "tests/fixtures/renovate-entrypoint.sh:/renovate-entrypoint.sh"; do
+            case "$run_line" in
+              *"$want"*) echo "ok: $want" ;;
+              *) echo "FAIL: missing '$want'"; exit 1 ;;
+            esac
+          done
+          case "$run_line" in
+            *"--rm ghcr.io/renovatebot/renovate:45 /renovate-entrypoint.sh") echo "ok: command after image" ;;
+            *) echo "FAIL: expected command file to follow the image"; exit 1 ;;
+          esac
+          echo "PASS"

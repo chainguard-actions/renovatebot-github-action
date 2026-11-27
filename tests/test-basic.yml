@@ -1,0 +1,62 @@
+name: Test basic usage with token input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker-calls.log
+          case "$*" in
+            *" --version"*) echo "99.9.9-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          rm -f /tmp/fake-docker-calls.log
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          token: test-renovate-token
+      - name: Assert docker invocations
+        run: |
+          echo "--- recorded docker calls ---"
+          cat /tmp/fake-docker-calls.log
+          echo "-----------------------------"
+          n=$(wc -l < /tmp/fake-docker-calls.log)
+          if [ "$n" -ne 2 ]; then
+            echo "FAIL: expected 2 docker calls, got $n"
+            exit 1
+          fi
+          first=$(sed -n 1p /tmp/fake-docker-calls.log)
+          second=$(sed -n 2p /tmp/fake-docker-calls.log)
+          if [ "$first" != "run --env FORCE_COLOR=3 --rm ghcr.io/renovatebot/renovate:45 --version" ]; then
+            echo "FAIL: unexpected version call: $first"
+            exit 1
+          fi
+          for want in \
+            "--env RENOVATE_TOKEN=test-renovate-token" \
+            "--env FORCE_COLOR=3" \
+            "RENOVATE_USER_AGENT=Renovate/{{renovateVersion}} (https://github.com/renovatebot/github-action)" \
+            "--volume /tmp:/tmp" \
+            "--rm ghcr.io/renovatebot/renovate:45"; do
+            case "$second" in
+              *"$want"*) echo "ok: $want" ;;
+              *) echo "FAIL: missing '$want'"; exit 1 ;;
+            esac
+          done
+          case "$second" in
+            *"--group-add"*|*"/var/run/docker.sock"*|*"--network"*|*"--user"*|*"RENOVATE_CONFIG_FILE"*)
+              echo "FAIL: unexpected optional argument present"; exit 1 ;;
+          esac
+          case "$second" in
+            "run "*) ;;
+            *) echo "FAIL: second call is not 'docker run'"; exit 1 ;;
+          esac
+          echo "PASS"

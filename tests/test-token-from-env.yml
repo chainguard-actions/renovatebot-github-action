@@ -1,0 +1,58 @@
+name: Test token and env passthrough via environment variables
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake docker CLI (records invocations)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fakebin"
+          cat > "$RUNNER_TEMP/fakebin/docker" <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/fake-docker-calls.log
+          case "$*" in
+            *" --version"*) echo "99.9.9-fake" ;;
+          esac
+          exit 0
+          EOF
+          chmod +x "$RUNNER_TEMP/fakebin/docker"
+          rm -f /tmp/fake-docker-calls.log
+          echo "$RUNNER_TEMP/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        env:
+          RENOVATE_TOKEN: env-renovate-token
+          RENOVATE_DRY_RUN: full
+          LOG_LEVEL: debug
+          MY_EXTRA_VAR: extra-value
+          NOT_PASSED_VAR: should-not-pass
+        with:
+          additional-env-list: |
+            MY_EXTRA_VAR
+      - name: Assert docker run arguments
+        run: |
+          cat /tmp/fake-docker-calls.log
+          run_line=$(sed -n 2p /tmp/fake-docker-calls.log)
+          echo "run: $run_line"
+          for want in \
+            "--env RENOVATE_TOKEN=env-renovate-token" \
+            "--env RENOVATE_DRY_RUN" \
+            "--env LOG_LEVEL" \
+            "--env MY_EXTRA_VAR"; do
+            case "$run_line" in
+              *"$want"*) echo "ok: $want" ;;
+              *) echo "FAIL: missing '$want'"; exit 1 ;;
+            esac
+          done
+          case "$run_line" in
+            *NOT_PASSED_VAR*) echo "FAIL: NOT_PASSED_VAR leaked"; exit 1 ;;
+          esac
+          # Token must only be passed once (as key=value), not also as bare --env RENOVATE_TOKEN
+          count=$(echo "$run_line" | grep -o "RENOVATE_TOKEN" | wc -l)
+          if [ "$count" -ne 1 ]; then
+            echo "FAIL: RENOVATE_TOKEN appears $count times"
+            exit 1
+          fi
+          echo "PASS"
